@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 )
 
@@ -34,7 +35,21 @@ func (d *dbCreator) DBExists(dbName string) bool {
 
 func (d *dbCreator) listDatabases() ([]string, error) {
 	u := fmt.Sprintf("%s/query?q=show%%20databases", d.daemonURL)
-	resp, err := http.Get(u)
+
+	// Create a new request using http
+	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, fmt.Errorf("listDatabases error: %s", err.Error())
+	}
+
+	// add authorization header to the req
+	// read from env
+	token := os.Getenv("INFLUXDB_TOKEN")
+	req.Header.Set("Authorization", "Token "+token)
+
+	// Send req using http Client
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("listDatabases error: %s", err.Error())
 	}
@@ -44,6 +59,8 @@ func (d *dbCreator) listDatabases() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println(string(body))
 
 	// Do ad-hoc parsing to find existing database names:
 	// {"results":[{"series":[{"name":"databases","columns":["name"],"values":[["_internal"],["benchmark_db"]]}]}]}%
@@ -74,16 +91,38 @@ func (d *dbCreator) listDatabases() ([]string, error) {
 
 func (d *dbCreator) RemoveOldDB(dbName string) error {
 	u := fmt.Sprintf("%s/query?q=drop+database+%s", d.daemonURL, dbName)
-	resp, err := http.Post(u, "text/plain", nil)
+
+	// Create a new request using http
+	req, err := http.NewRequest("POST", u, nil)
 	if err != nil {
 		return fmt.Errorf("drop db error: %s", err.Error())
 	}
+
+	// add authorization header to the req
+	token := os.Getenv("INFLUXDB_TOKEN")
+	req.Header.Set("Authorization", "Token "+token)
+
+	// Send req using http Client
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("drop db error: %s", err.Error())
+	}
+
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("drop db returned non-200 code: %d", resp.StatusCode)
 	}
 	time.Sleep(time.Second)
 	return nil
 }
+
+
+
+
+
+
+
+
 
 func (d *dbCreator) CreateDB(dbName string) error {
 	u, err := url.Parse(d.daemonURL)
@@ -99,6 +138,8 @@ func (d *dbCreator) CreateDB(dbName string) error {
 	u.RawQuery = v.Encode()
 
 	req, err := http.NewRequest("GET", u.String(), nil)
+	token := os.Getenv("INFLUXDB_TOKEN")
+	req.Header.Set("Authorization", "Token "+token)
 	if err != nil {
 		return err
 	}

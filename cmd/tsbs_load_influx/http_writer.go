@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"time"
-
+	"os"
 	"github.com/valyala/fasthttp"
 )
 
@@ -69,6 +69,10 @@ func (w *HTTPWriter) initializeReq(req *fasthttp.Request, body []byte, isGzip bo
 	req.Header.SetContentTypeBytes(textPlain)
 	req.Header.SetMethodBytes(methodPost)
 	req.Header.SetRequestURIBytes(w.url)
+	// token
+	token := os.Getenv("INFLUXDB_TOKEN")
+	req.Header.Add("Authorization", "Token "+ token)
+	
 	if isGzip {
 		req.Header.Add(headerContentEncoding, headerGzip)
 	}

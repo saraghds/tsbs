@@ -27,7 +27,11 @@ func (d *dbCreator) Init() {
 
 // loader.DBCreator interface implementation
 func (d *dbCreator) DBExists(dbName string) bool {
+	fmt.Println("dbCreator.DBExists: dbName: ", dbName)
+	fmt.Println("dbCreator.DBExists: d.config: ", d.config)
+	fmt.Println("dbType: ", dbType)
 	db := sqlx.MustConnect(dbType, getConnectString(d.config, false))
+	fmt.Println("dbCreator.DBExists: dbName: ", dbName)
 	defer db.Close()
 
 	sql := fmt.Sprintf("SELECT name, engine FROM system.databases WHERE name = '%s'", dbName)

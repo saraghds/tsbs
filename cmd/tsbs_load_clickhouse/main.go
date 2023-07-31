@@ -1,4 +1,4 @@
-// tsbs_load_clickhouse loads a ClickHouse instance with data from stdin.
+  // tsbs_load_clickhouse loads a ClickHouse instance with data from stdin.
 //
 // If the database exists beforehand, it will be *DROPPED*.
 package main
