@@ -80,14 +80,15 @@ func (d *dbCreator) listDatabases() ([]string, error) {
 	ret := []string{}
 	fmt.Println("string(body)",string(body))
 	fmt.Println("listing",listing)
-	for _, nestedName := range listing.Results[0].Series[0].Values {
-		name := nestedName[0]
-		// the _internal database is skipped:
-		if name == "_internal" {
-			continue
-		}
-		ret = append(ret, name)
-	}
+	// if 
+	// for _, nestedName := range listing.Results[0].Series[0].Values {
+	// 	name := nestedName[0]
+	// 	// the _internal database is skipped:
+	// 	if name == "_internal" {
+	// 		continue
+	// 	}
+	// 	ret = append(ret, name)
+	// }
 	return ret, nil
 }
 
