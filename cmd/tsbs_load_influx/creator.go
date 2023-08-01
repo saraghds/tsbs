@@ -78,6 +78,8 @@ func (d *dbCreator) listDatabases() ([]string, error) {
 	}
 
 	ret := []string{}
+	print("string(body)",string(body))
+	print("listing",listing)
 	for _, nestedName := range listing.Results[0].Series[0].Values {
 		name := nestedName[0]
 		// the _internal database is skipped:
