@@ -93,7 +93,7 @@ func (w *HTTPClient) Do(q *query.HTTP, opts *HTTPClientDoOptions) (lag float64, 
 
 	var body []byte
 	body, err = ioutil.ReadAll(resp.Body)
-	fmt.Println("body:", string(body))
+	// fmt.Println("body:", string(body))
 
 	if err != nil {
 		panic(err)
