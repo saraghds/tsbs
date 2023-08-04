@@ -60,7 +60,7 @@ func (d *dbCreator) listDatabases() ([]string, error) {
 		return nil, err
 	}
 
-	fmt.Println(string(body))
+	// fmt.Println(string(body))
 
 	// Do ad-hoc parsing to find existing database names:
 	// {"results":[{"series":[{"name":"databases","columns":["name"],"values":[["_internal"],["benchmark_db"]]}]}]}%
