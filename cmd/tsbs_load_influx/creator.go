@@ -60,8 +60,6 @@ func (d *dbCreator) listDatabases() ([]string, error) {
 		return nil, err
 	}
 
-	// fmt.Println(string(body))
-
 	// Do ad-hoc parsing to find existing database names:
 	// {"results":[{"series":[{"name":"databases","columns":["name"],"values":[["_internal"],["benchmark_db"]]}]}]}%
 	type listingType struct {
@@ -78,8 +76,6 @@ func (d *dbCreator) listDatabases() ([]string, error) {
 	}
 
 	ret := []string{}
-	fmt.Println("string(body)",string(body))
-	fmt.Println("listing",listing)
 	// if 
 	// for _, nestedName := range listing.Results[0].Series[0].Values {
 	// 	name := nestedName[0]
