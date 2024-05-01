@@ -65,7 +65,6 @@ func (w *HTTPClient) Do(q *query.HTTP, opts *HTTPClientDoOptions) (lag float64, 
 	w.uri = append(w.uri, q.Path...)
 	w.uri = append(w.uri, []byte("&db="+url.QueryEscape(opts.database))...)
 	if opts.chunkSize > 0 {
-		fmt.Println("chunk size: ", opts.chunkSize)
 		s := fmt.Sprintf("&chunked=true&chunk_size=%d", opts.chunkSize)
 		w.uri = append(w.uri, []byte(s)...)
 	}
@@ -87,13 +86,11 @@ func (w *HTTPClient) Do(q *query.HTTP, opts *HTTPClientDoOptions) (lag float64, 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("status code: ", resp.StatusCode)
 		panic("http request did not return status 200 OK")
 	}
 
 	var body []byte
 	body, err = ioutil.ReadAll(resp.Body)
-	// fmt.Println("body:", string(body))
 
 	if err != nil {
 		panic(err)

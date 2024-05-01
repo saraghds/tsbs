@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	// "net/url"
 	"os"
 	"time"
 )
@@ -76,15 +75,16 @@ func (d *dbCreator) listDatabases() ([]string, error) {
 	}
 
 	ret := []string{}
-	// if 
-	// for _, nestedName := range listing.Results[0].Series[0].Values {
-	// 	name := nestedName[0]
-	// 	// the _internal database is skipped:
-	// 	if name == "_internal" {
-	// 		continue
-	// 	}
-	// 	ret = append(ret, name)
-	// }
+	if len(listing.Results) > 0 && len(listing.Results[0].Series) > 0 {
+		for _, nestedName := range listing.Results[0].Series[0].Values {
+			name := nestedName[0]
+			// the _internal database is skipped:
+			if name == "_internal" {
+				continue
+			}
+			ret = append(ret, name)
+		}
+	}
 	return ret, nil
 }
 
@@ -114,14 +114,6 @@ func (d *dbCreator) RemoveOldDB(dbName string) error {
 	time.Sleep(time.Second)
 	return nil
 }
-
-
-
-
-
-
-
-
 
 func (d *dbCreator) CreateDB(dbName string) error {
 	// u, err := url.Parse(d.daemonURL)
