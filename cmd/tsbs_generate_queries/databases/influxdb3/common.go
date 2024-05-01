@@ -22,10 +22,9 @@ func (g *BaseGenerator) GenerateEmptyQuery() query.Query {
 
 // fillInQuery fills the query struct with data.
 func (g *BaseGenerator) fillInQuery(qi query.Query, humanLabel, humanDesc, table, sql string) {
-	q := qi.(*query.TimescaleDB)
+	q := qi.(*query.InfluxDB3)
 	q.HumanLabel = []byte(humanLabel)
 	q.HumanDescription = []byte(humanDesc)
-	q.Hypertable = []byte(table)
 	q.SqlQuery = []byte(sql)
 }
 
