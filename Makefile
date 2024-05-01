@@ -33,6 +33,7 @@ runners: tsbs_run_queries_akumuli \
 		 tsbs_run_queries_clickhouse \
 		 tsbs_run_queries_cratedb \
 		 tsbs_run_queries_influx \
+		 tsbs_run_queries_influxdb3 \
 		 tsbs_run_queries_mongo \
 		 tsbs_run_queries_siridb \
 		 tsbs_run_queries_timescaledb \
