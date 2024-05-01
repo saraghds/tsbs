@@ -333,6 +333,7 @@ func TestGetSerializer(t *testing.T) {
 	checkWriteHeader(constants.FormatCassandra, false)
 	checkWriteHeader(constants.FormatClickhouse, true)
 	checkWriteHeader(constants.FormatInflux, false)
+	checkWriteHeader(constants.FormatInfluxDB3, false)
 	checkWriteHeader(constants.FormatMongo, false)
 	checkWriteHeader(constants.FormatSiriDB, false)
 	checkWriteHeader(constants.FormatCrateDB, true)

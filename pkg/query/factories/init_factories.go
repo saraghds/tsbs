@@ -6,6 +6,7 @@ import (
 	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/databases/clickhouse"
 	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/databases/cratedb"
 	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/databases/influx"
+	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/databases/influxdb3"
 	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/databases/mongo"
 	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/databases/questdb"
 	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/databases/siridb"
@@ -24,6 +25,7 @@ func InitQueryFactories(config *config.QueryGeneratorConfig) map[string]interfac
 	}
 	factories[constants.FormatCrateDB] = &cratedb.BaseGenerator{}
 	factories[constants.FormatInflux] = &influx.BaseGenerator{}
+	factories[constants.FormatInfluxDB3] = &influxdb3.BaseGenerator{}
 	factories[constants.FormatTimescaleDB] = &timescaledb.BaseGenerator{
 		UseJSON:       config.TimescaleUseJSON,
 		UseTags:       config.TimescaleUseTags,
