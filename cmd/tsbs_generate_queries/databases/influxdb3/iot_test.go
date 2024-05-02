@@ -149,7 +149,6 @@ func TestTrucksWithHighLoad(t *testing.T) {
 			ORDER BY time DESC 
 			LIMIT 1) 
 		WHERE current_load >= 0.9 * load_capacity 
-		GROUP BY name 
 		ORDER BY time DESC`,
 		},
 	}
@@ -208,7 +207,7 @@ func TestTrucksWithLongDrivingSessions(t *testing.T) {
 			expectedHumanDesc:  "InfluxDB3 trucks with longer driving sessions: stopped less than 20 mins in 4 hour period",
 			expectedSQLQuery: `SELECT name, driver
 		FROM (
-			SELECT name, driver, time_bucket('10 minutes', time) AS ten_minutes
+			SELECT name, driver, to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes
 			FROM readings 
 			WHERE time >= '1970-01-01 00:16:22.646325 +0000' AND time < '1970-01-01 04:16:22.646325 +0000'
 			GROUP BY ten_minutes
@@ -247,7 +246,7 @@ func TestTrucksWithLongDailySessions(t *testing.T) {
 			expectedHumanDesc:  "InfluxDB3 trucks with longer daily sessions: drove more than 10 hours in the last 24 hours",
 			expectedSQLQuery: `SELECT name, driver
 		FROM (
-			SELECT name, driver, time_bucket('10 minutes', time) AS ten_minutes 
+			SELECT name, driver, to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes 
 			FROM readings 
 			WHERE time >= '1970-01-01 00:16:22.646325 +0000' AND time < '1970-01-02 00:16:22.646325 +0000'
 			GROUP BY ten_minutes
@@ -319,13 +318,13 @@ func TestAvgDailyDrivingDuration(t *testing.T) {
 			expectedHumanDesc:  "InfluxDB3 average driver driving duration per day",
 			expectedSQLQuery: `WITH ten_minute_driving_sessions
 		AS (
-			SELECT time_bucket('10 minutes', TIME) AS ten_minutes
+			SELECT to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes
 			FROM readings
 			GROUP BY ten_minutes
 			HAVING avg(velocity) > 1
 			), daily_total_session
 		AS (
-			SELECT time_bucket('24 hours', ten_minutes) AS day, count(*) / 6 AS hours
+			SELECT to_timestamp(((extract(epoch from ten_minutes)::int)/86400)*86400) AS day, count(*) / 6 AS hours
 			FROM ten_minute_driving_sessions
 			GROUP BY day
 			)
@@ -362,7 +361,7 @@ func TestAvgDailyDrivingSession(t *testing.T) {
 
 			expectedSQLQuery: `WITH driver_status
 		AS (
-			SELECT name, time_bucket('10 mins', TIME) AS ten_minutes, avg(velocity) > 5 AS driving
+			SELECT name, to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes, avg(velocity) > 5 AS driving
 			FROM readings
 			GROUP BY ten_minutes
 			ORDER BY ten_minutes
@@ -375,7 +374,7 @@ func TestAvgDailyDrivingSession(t *testing.T) {
 				) x
 			WHERE x.driving <> x.prev_driving
 			)
-		SELECT name, time_bucket('24 hours', start) AS day, avg(age(stop, start)) AS duration
+		SELECT name, to_timestamp(((extract(epoch from start)::int)/86400)*86400) AS day, avg(age(stop, start)) AS duration
 		FROM driver_status_change
 		WHERE driving = true
 		GROUP BY name, day
@@ -443,7 +442,7 @@ func TestDailyTruckActivity(t *testing.T) {
 			expectedHumanDesc:  "InfluxDB3 daily truck activity per fleet per model",
 			expectedSQLQuery: `SELECT fleet, model, day, sum(ten_mins_per_day) / 144 AS daily_activity
 		FROM (
-			SELECT time_bucket('24 hours', TIME) AS day, time_bucket('10 minutes', TIME) AS ten_minutes, count(*) AS ten_mins_per_day
+			SELECT to_timestamp(((extract(epoch from time)::int)/86400)*86400) AS day, to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes, count(*) AS ten_mins_per_day
 			FROM diagnostics
 			GROUP BY day, ten_minutes
 			HAVING avg(STATUS) < 1
@@ -479,7 +478,7 @@ func TestTruckBreakdownFrequency(t *testing.T) {
 			expectedHumanDesc:  "InfluxDB3 truck breakdown frequency per model",
 			expectedSQLQuery: `WITH breakdown_per_truck_per_ten_minutes
 		AS (
-			SELECT time_bucket('10 minutes', TIME) AS ten_minutes, count(STATUS = 0) / count(*) >= 0.5 AS broken_down
+			SELECT to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes, count(STATUS = 0) / count(*) >= 0.5 AS broken_down
 			FROM diagnostics
 			GROUP BY ten_minutes
 			), breakdowns_per_truck

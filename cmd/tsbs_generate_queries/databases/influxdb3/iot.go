@@ -103,7 +103,6 @@ func (i *IoT) TrucksWithHighLoad(qi query.Query) {
 			ORDER BY time DESC 
 			LIMIT 1) 
 		WHERE current_load >= 0.9 * load_capacity 
-		GROUP BY name 
 		ORDER BY time DESC`,
 		i.GetRandomFleet())
 
@@ -136,7 +135,7 @@ func (i *IoT) TrucksWithLongDrivingSessions(qi query.Query) {
 	interval := i.Interval.MustRandWindow(iot.LongDrivingSessionDuration)
 	sql := fmt.Sprintf(`SELECT name, driver
 		FROM (
-			SELECT name, driver, time_bucket('10 minutes', time) AS ten_minutes
+			SELECT name, driver, %s AS ten_minutes
 			FROM readings 
 			WHERE time >= '%s' AND time < '%s'
 			GROUP BY ten_minutes
@@ -146,6 +145,7 @@ func (i *IoT) TrucksWithLongDrivingSessions(qi query.Query) {
 		WHERE fleet = '%s'
 		GROUP BY name, driver
 		HAVING count(ten_minutes) > %d`,
+		getNonTimeBucket("time", 10*time.Minute),
 		interval.Start().Format(goTimeFmt),
 		interval.End().Format(goTimeFmt),
 		i.GetRandomFleet(),
@@ -163,7 +163,7 @@ func (i *IoT) TrucksWithLongDailySessions(qi query.Query) {
 	interval := i.Interval.MustRandWindow(iot.DailyDrivingDuration)
 	sql := fmt.Sprintf(`SELECT name, driver
 		FROM (
-			SELECT name, driver, time_bucket('10 minutes', time) AS ten_minutes 
+			SELECT name, driver, %s AS ten_minutes 
 			FROM readings 
 			WHERE time >= '%s' AND time < '%s'
 			GROUP BY ten_minutes
@@ -173,6 +173,7 @@ func (i *IoT) TrucksWithLongDailySessions(qi query.Query) {
 		WHERE fleet = '%s'
 		GROUP BY name, driver 
 		HAVING count(ten_minutes) > %d`,
+		getNonTimeBucket("time", 10*time.Minute),
 		interval.Start().Format(goTimeFmt),
 		interval.End().Format(goTimeFmt),
 		i.GetRandomFleet(),
@@ -201,21 +202,23 @@ func (i *IoT) AvgVsProjectedFuelConsumption(qi query.Query) {
 
 // AvgDailyDrivingDuration finds the average driving duration per driver.
 func (i *IoT) AvgDailyDrivingDuration(qi query.Query) {
-	sql := `WITH ten_minute_driving_sessions
+	sql := fmt.Sprintf(`WITH ten_minute_driving_sessions
 		AS (
-			SELECT time_bucket('10 minutes', TIME) AS ten_minutes
+			SELECT %s AS ten_minutes
 			FROM readings
 			GROUP BY ten_minutes
 			HAVING avg(velocity) > 1
 			), daily_total_session
 		AS (
-			SELECT time_bucket('24 hours', ten_minutes) AS day, count(*) / 6 AS hours
+			SELECT %s AS day, count(*) / 6 AS hours
 			FROM ten_minute_driving_sessions
 			GROUP BY day
 			)
 		SELECT fleet, name, driver, avg(hours) AS avg_daily_hours
 		FROM daily_total_session
-		GROUP BY fleet, name, driver`
+		GROUP BY fleet, name, driver`,
+		getNonTimeBucket("time", 10*time.Minute),
+		getNonTimeBucket("ten_minutes", 24*time.Hour))
 
 	humanLabel := "InfluxDB3 average driver driving duration per day"
 	humanDesc := humanLabel
@@ -225,9 +228,9 @@ func (i *IoT) AvgDailyDrivingDuration(qi query.Query) {
 
 // AvgDailyDrivingSession finds the average driving session without stopping per driver per day.
 func (i *IoT) AvgDailyDrivingSession(qi query.Query) {
-	sql := `WITH driver_status
+	sql := fmt.Sprintf(`WITH driver_status
 		AS (
-			SELECT name, time_bucket('10 mins', TIME) AS ten_minutes, avg(velocity) > 5 AS driving
+			SELECT name, %s AS ten_minutes, avg(velocity) > 5 AS driving
 			FROM readings
 			GROUP BY ten_minutes
 			ORDER BY ten_minutes
@@ -240,11 +243,13 @@ func (i *IoT) AvgDailyDrivingSession(qi query.Query) {
 				) x
 			WHERE x.driving <> x.prev_driving
 			)
-		SELECT name, time_bucket('24 hours', start) AS day, avg(age(stop, start)) AS duration
+		SELECT name, %s AS day, avg(age(stop, start)) AS duration
 		FROM driver_status_change
 		WHERE driving = true
 		GROUP BY name, day
-		ORDER BY name, day`
+		ORDER BY name, day`,
+		getNonTimeBucket("time", 10*time.Minute),
+		getNonTimeBucket("start", 24*time.Hour))
 
 	humanLabel := "InfluxDB3 average driver driving session without stopping per day"
 	humanDesc := humanLabel
@@ -270,15 +275,17 @@ func (i *IoT) AvgLoad(qi query.Query) {
 
 // DailyTruckActivity returns the number of hours trucks has been active (not out-of-commission) per day per fleet per model.
 func (i *IoT) DailyTruckActivity(qi query.Query) {
-	sql := `SELECT fleet, model, day, sum(ten_mins_per_day) / 144 AS daily_activity
+	sql := fmt.Sprintf(`SELECT fleet, model, day, sum(ten_mins_per_day) / 144 AS daily_activity
 		FROM (
-			SELECT time_bucket('24 hours', TIME) AS day, time_bucket('10 minutes', TIME) AS ten_minutes, count(*) AS ten_mins_per_day
+			SELECT %s AS day, %s AS ten_minutes, count(*) AS ten_mins_per_day
 			FROM diagnostics
 			GROUP BY day, ten_minutes
 			HAVING avg(STATUS) < 1
 		)
 		GROUP BY fleet, model, day
-		ORDER BY day`
+		ORDER BY day`,
+		getNonTimeBucket("time", 24*time.Hour),
+		getNonTimeBucket("time", 10*time.Minute))
 
 	humanLabel := "InfluxDB3 daily truck activity per fleet per model"
 	humanDesc := humanLabel
@@ -288,9 +295,9 @@ func (i *IoT) DailyTruckActivity(qi query.Query) {
 
 // TruckBreakdownFrequency calculates the amount of times a truck model broke down in the last period.
 func (i *IoT) TruckBreakdownFrequency(qi query.Query) {
-	sql := `WITH breakdown_per_truck_per_ten_minutes
+	sql := fmt.Sprintf(`WITH breakdown_per_truck_per_ten_minutes
 		AS (
-			SELECT time_bucket('10 minutes', TIME) AS ten_minutes, count(STATUS = 0) / count(*) >= 0.5 AS broken_down
+			SELECT %s AS ten_minutes, count(STATUS = 0) / count(*) >= 0.5 AS broken_down
 			FROM diagnostics
 			GROUP BY ten_minutes
 			), breakdowns_per_truck
@@ -301,7 +308,8 @@ func (i *IoT) TruckBreakdownFrequency(qi query.Query) {
 		SELECT model, count(*)
 		FROM breakdowns_per_truck
 		WHERE broken_down = false AND next_broken_down = true
-		GROUP BY model`
+		GROUP BY model`,
+		getNonTimeBucket("time", 10*time.Minute))
 
 	humanLabel := "InfluxDB3 truck breakdown frequency per model"
 	humanDesc := humanLabel
@@ -316,4 +324,9 @@ func tenMinutePeriods(minutesPerHour float64, duration time.Duration) int {
 	durationMinutes := duration.Minutes()
 	leftover := minutesPerHour * duration.Hours()
 	return int((durationMinutes - leftover) / 10)
+}
+
+func getNonTimeBucket(column string, duration time.Duration) string {
+	durationSeconds := int(duration.Seconds())
+	return fmt.Sprintf("to_timestamp(((extract(epoch from %s)::int)/%d)*%d)", column, durationSeconds, durationSeconds)
 }
