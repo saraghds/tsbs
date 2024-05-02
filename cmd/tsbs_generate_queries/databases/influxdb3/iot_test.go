@@ -407,8 +407,12 @@ func TestAvgLoad(t *testing.T) {
 
 			expectedHumanLabel: "InfluxDB3 average load per truck model per fleet",
 			expectedHumanDesc:  "InfluxDB3 average load per truck model per fleet",
-			expectedSQLQuery: `SELECT fleet, model, load_capacity, avg(avg(current_load) / load_capacity) AS avg_load_percentage
-		FROM diagnostics
+			expectedSQLQuery: `SELECT fleet, model, load_capacity, avg(avg_load / load_capacity) AS avg_load_percentage
+		FROM (
+			SELECT fleet, model, load_capacity, avg(current_load) AS avg_load
+			FROM diagnostics
+			GROUP BY fleet, model, load_capacity
+		)
 		GROUP BY fleet, model, load_capacity`,
 		},
 	}

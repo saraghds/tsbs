@@ -254,8 +254,12 @@ func (i *IoT) AvgDailyDrivingSession(qi query.Query) {
 
 // AvgLoad finds the average load per truck model per fleet.
 func (i *IoT) AvgLoad(qi query.Query) {
-	sql := `SELECT fleet, model, load_capacity, avg(avg(current_load) / load_capacity) AS avg_load_percentage
-		FROM diagnostics
+	sql := `SELECT fleet, model, load_capacity, avg(avg_load / load_capacity) AS avg_load_percentage
+		FROM (
+			SELECT fleet, model, load_capacity, avg(current_load) AS avg_load
+			FROM diagnostics
+			GROUP BY fleet, model, load_capacity
+		)
 		GROUP BY fleet, model, load_capacity`
 
 	humanLabel := "InfluxDB3 average load per truck model per fleet"
