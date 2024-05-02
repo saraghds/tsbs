@@ -15,51 +15,17 @@ func TestDevopsGetHostWhereWithHostnames(t *testing.T) {
 	cases := []struct {
 		desc      string
 		hostnames []string
-		useJSON   bool
-		useTags   bool
 		want      string
 	}{
 		{
-			desc:      "single host - no json or tags",
+			desc:      "single host",
 			hostnames: []string{"foo1"},
-			useJSON:   false,
-			useTags:   false,
 			want:      "hostname IN ('foo1')",
 		},
 		{
-			desc:      "multi host - no json or tags",
+			desc:      "multi host",
 			hostnames: []string{"foo1", "foo2"},
-			useJSON:   false,
-			useTags:   false,
 			want:      "hostname IN ('foo1','foo2')",
-		},
-		{
-			desc:      "single host - w/ json",
-			hostnames: []string{"foo1"},
-			useJSON:   true,
-			useTags:   false,
-			want:      "tags_id IN (SELECT id FROM tags WHERE tagset @> '{\"hostname\": \"foo1\"}')",
-		},
-		{
-			desc:      "multi host - w/ json",
-			hostnames: []string{"foo1", "foo2"},
-			useJSON:   true,
-			useTags:   false,
-			want:      "tags_id IN (SELECT id FROM tags WHERE tagset @> '{\"hostname\": \"foo1\"}' OR tagset @> '{\"hostname\": \"foo2\"}')",
-		},
-		{
-			desc:      "single host - w/ tags",
-			hostnames: []string{"foo1"},
-			useJSON:   false,
-			useTags:   true,
-			want:      "tags_id IN (SELECT id FROM tags WHERE hostname IN ('foo1'))",
-		},
-		{
-			desc:      "multi host - w/ tags",
-			hostnames: []string{"foo1", "foo2"},
-			useJSON:   false,
-			useTags:   true,
-			want:      "tags_id IN (SELECT id FROM tags WHERE hostname IN ('foo1','foo2'))",
 		},
 	}
 
@@ -155,7 +121,7 @@ func TestDevopsGetSelectClausesAggMetrics(t *testing.T) {
 func TestDevopsGroupByTime(t *testing.T) {
 	expectedHumanLabel := "InfluxDB3 1 cpu metric(s), random    1 hosts, random 1s by 1m"
 	expectedHumanDesc := "InfluxDB3 1 cpu metric(s), random    1 hosts, random 1s by 1m: 1970-01-01T00:05:58Z"
-	expectedSQLQuery := `SELECT time_bucket('60 seconds', time) AS minute,
+	expectedSQLQuery := `SELECT to_timestamp(((extract(epoch from time)::int)/60)*60) AS minute,
         max(usage_user) as max_usage_user
         FROM cpu
         WHERE hostname IN ('host_9') AND time >= '1970-01-01 00:05:58.646325 +0000' AND time < '1970-01-01 00:05:59.646325 +0000'
@@ -184,7 +150,7 @@ func TestDevopsGroupByTime(t *testing.T) {
 func TestGroupByOrderByLimit(t *testing.T) {
 	expectedHumanLabel := "InfluxDB3 max cpu over last 5 min-intervals (random end)"
 	expectedHumanDesc := "InfluxDB3 max cpu over last 5 min-intervals (random end): 1970-01-01T01:16:22Z"
-	expectedSQLQuery := `SELECT time_bucket('60 seconds', time) AS minute, max(usage_user)
+	expectedSQLQuery := `SELECT to_timestamp(((extract(epoch from time)::int)/60)*60) AS minute, max(usage_user)
         FROM cpu
         WHERE time < '1970-01-01 01:16:22.646325 +0000'
         GROUP BY minute
@@ -210,21 +176,19 @@ func TestGroupByOrderByLimit(t *testing.T) {
 func TestGroupByTimeAndPrimaryTag(t *testing.T) {
 	cases := []struct {
 		desc               string
-		useJSON            bool
-		useTags            bool
 		expectedHumanLabel string
 		expectedHumanDesc  string
 		expectedHypertable string
 		expectedSQLQuery   string
 	}{
 		{
-			desc:               "no JSON or tags",
+			desc:               "normal",
 			expectedHumanLabel: "InfluxDB3 mean of 1 metrics, all hosts, random 12h0m0s by 1h",
 			expectedHumanDesc:  "InfluxDB3 mean of 1 metrics, all hosts, random 12h0m0s by 1h: 1970-01-01T00:16:22Z",
 			expectedHypertable: "cpu",
 			expectedSQLQuery: `
         WITH cpu_avg AS (
-          SELECT time_bucket('3600 seconds', time) as hour, hostname,
+          SELECT to_timestamp(((extract(epoch from time)::int)/3600)*3600) as hour, hostname,
           avg(usage_user) as mean_usage_user
           FROM cpu
           WHERE time >= '1970-01-01 00:16:22.646325 +0000' AND time < '1970-01-01 12:16:22.646325 +0000'
@@ -234,64 +198,6 @@ func TestGroupByTimeAndPrimaryTag(t *testing.T) {
         FROM cpu_avg
         
         ORDER BY hour, hostname`,
-		},
-		{
-			desc:               "use JSON",
-			useJSON:            true,
-			expectedHumanLabel: "InfluxDB3 mean of 1 metrics, all hosts, random 12h0m0s by 1h",
-			expectedHumanDesc:  "InfluxDB3 mean of 1 metrics, all hosts, random 12h0m0s by 1h: 1970-01-01T00:54:10Z",
-			expectedHypertable: "cpu",
-			expectedSQLQuery: `
-        WITH cpu_avg AS (
-          SELECT time_bucket('3600 seconds', time) as hour, tags_id,
-          avg(usage_user) as mean_usage_user
-          FROM cpu
-          WHERE time >= '1970-01-01 00:54:10.138978 +0000' AND time < '1970-01-01 12:54:10.138978 +0000'
-          GROUP BY 1, 2
-        )
-        SELECT hour, tags->>'hostname', mean_usage_user
-        FROM cpu_avg
-        JOIN tags ON cpu_avg.tags_id = tags.id
-        ORDER BY hour, tags->>'hostname'`,
-		},
-		{
-			desc:               "use tags",
-			useTags:            true,
-			expectedHumanLabel: "InfluxDB3 mean of 1 metrics, all hosts, random 12h0m0s by 1h",
-			expectedHumanDesc:  "InfluxDB3 mean of 1 metrics, all hosts, random 12h0m0s by 1h: 1970-01-01T00:47:30Z",
-			expectedHypertable: "cpu",
-			expectedSQLQuery: `
-        WITH cpu_avg AS (
-          SELECT time_bucket('3600 seconds', time) as hour, tags_id,
-          avg(usage_user) as mean_usage_user
-          FROM cpu
-          WHERE time >= '1970-01-01 00:47:30.894865 +0000' AND time < '1970-01-01 12:47:30.894865 +0000'
-          GROUP BY 1, 2
-        )
-        SELECT hour, tags.hostname, mean_usage_user
-        FROM cpu_avg
-        JOIN tags ON cpu_avg.tags_id = tags.id
-        ORDER BY hour, tags.hostname`,
-		},
-		{
-			desc:               "enable JSON and tags but use JSON",
-			useJSON:            true,
-			useTags:            true,
-			expectedHumanLabel: "InfluxDB3 mean of 1 metrics, all hosts, random 12h0m0s by 1h",
-			expectedHumanDesc:  "InfluxDB3 mean of 1 metrics, all hosts, random 12h0m0s by 1h: 1970-01-01T00:37:12Z",
-			expectedHypertable: "cpu",
-			expectedSQLQuery: `
-        WITH cpu_avg AS (
-          SELECT time_bucket('3600 seconds', time) as hour, tags_id,
-          avg(usage_user) as mean_usage_user
-          FROM cpu
-          WHERE time >= '1970-01-01 00:37:12.342805 +0000' AND time < '1970-01-01 12:37:12.342805 +0000'
-          GROUP BY 1, 2
-        )
-        SELECT hour, tags->>'hostname', mean_usage_user
-        FROM cpu_avg
-        JOIN tags ON cpu_avg.tags_id = tags.id
-        ORDER BY hour, tags->>'hostname'`,
 		},
 	}
 
@@ -321,7 +227,7 @@ func TestGroupByTimeAndPrimaryTag(t *testing.T) {
 func TestMaxAllCPU(t *testing.T) {
 	expectedHumanLabel := "InfluxDB3 max of all CPU metrics, random    1 hosts, random 8h0m0s by 1h"
 	expectedHumanDesc := "InfluxDB3 max of all CPU metrics, random    1 hosts, random 8h0m0s by 1h: 1970-01-01T00:16:22Z"
-	expectedSQLQuery := `SELECT time_bucket('3600 seconds', time) AS hour,
+	expectedSQLQuery := `SELECT to_timestamp(((extract(epoch from time)::int)/3600)*3600) AS hour,
         max(usage_user) as max_usage_user, max(usage_system) as max_usage_system, max(usage_idle) as max_usage_idle, ` +
 		"max(usage_nice) as max_usage_nice, max(usage_iowait) as max_usage_iowait, max(usage_irq) as max_usage_irq, " +
 		"max(usage_softirq) as max_usage_softirq, max(usage_steal) as max_usage_steal, max(usage_guest) as max_usage_guest, " +
@@ -348,47 +254,17 @@ func TestMaxAllCPU(t *testing.T) {
 func TestLastPointPerHost(t *testing.T) {
 	cases := []struct {
 		desc               string
-		useJSON            bool
-		useTags            bool
 		expectedHumanLabel string
 		expectedHumanDesc  string
 		expectedHypertable string
 		expectedSQLQuery   string
 	}{
 		{
-			desc:               "no JSON or tags",
+			desc:               "normal",
 			expectedHumanLabel: "InfluxDB3 last row per host",
 			expectedHumanDesc:  "InfluxDB3 last row per host",
 			expectedHypertable: "cpu",
 			expectedSQLQuery:   "SELECT DISTINCT ON (hostname) * FROM cpu ORDER BY hostname, time DESC",
-		},
-		{
-			desc:               "use JSON",
-			useJSON:            true,
-			expectedHumanLabel: "InfluxDB3 last row per host",
-			expectedHumanDesc:  "InfluxDB3 last row per host",
-			expectedHypertable: "cpu",
-			expectedSQLQuery: "SELECT DISTINCT ON (t.tagset->>'hostname') * FROM tags t INNER JOIN LATERAL(SELECT * " +
-				"FROM cpu c WHERE c.tags_id = t.id ORDER BY time DESC LIMIT 1) AS b ON true ORDER BY t.tagset->>'hostname', b.time DESC",
-		},
-		{
-			desc:               "use tags",
-			useTags:            true,
-			expectedHumanLabel: "InfluxDB3 last row per host",
-			expectedHumanDesc:  "InfluxDB3 last row per host",
-			expectedHypertable: "cpu",
-			expectedSQLQuery: "SELECT DISTINCT ON (t.hostname) * FROM tags t INNER JOIN LATERAL(SELECT * FROM cpu c " +
-				"WHERE c.tags_id = t.id ORDER BY time DESC LIMIT 1) AS b ON true ORDER BY t.hostname, b.time DESC",
-		},
-		{
-			desc:               "enable JSON and tags but use tags",
-			useJSON:            true,
-			useTags:            true,
-			expectedHumanLabel: "InfluxDB3 last row per host",
-			expectedHumanDesc:  "InfluxDB3 last row per host",
-			expectedHypertable: "cpu",
-			expectedSQLQuery: "SELECT DISTINCT ON (t.hostname) * FROM tags t INNER JOIN LATERAL(SELECT * FROM cpu c " +
-				"WHERE c.tags_id = t.id ORDER BY time DESC LIMIT 1) AS b ON true ORDER BY t.hostname, b.time DESC",
 		},
 	}
 

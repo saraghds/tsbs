@@ -42,27 +42,11 @@ func TestLastLocByTruck(t *testing.T) {
 
 			expectedHumanLabel: "InfluxDB3 last location by specific truck",
 			expectedHumanDesc:  "InfluxDB3 last location by specific truck: random    1 trucks",
-			expectedSQLQuery: `SELECT t.name AS name, t.driver AS driver, r.*
-		FROM tags t INNER JOIN LATERAL
-			(SELECT longitude, latitude
-			FROM readings r
-			WHERE r.tags_id=t.id
-			ORDER BY time DESC LIMIT 1)  r ON true
-		WHERE t.name IN ('truck_5')`,
-		},
-		{
-			desc:  "one truck use json",
-			input: 1,
-
-			expectedHumanLabel: "InfluxDB3 last location by specific truck",
-			expectedHumanDesc:  "InfluxDB3 last location by specific truck: random    1 trucks",
-			expectedSQLQuery: `SELECT t.tagset->>'name' AS name, t.tagset->>'driver' AS driver, r.*
-		FROM tags t INNER JOIN LATERAL
-			(SELECT longitude, latitude
-			FROM readings r
-			WHERE r.tags_id=t.id
-			ORDER BY time DESC LIMIT 1)  r ON true
-		WHERE t.tags_id IN (SELECT id FROM tags WHERE tagset @> '{"name": "truck_9"}')`,
+			expectedSQLQuery: `SELECT name, driver, latitude, longitude 
+		FROM readings 
+		WHERE name IN ('truck_5')
+		ORDER BY time 
+		LIMIT 1`,
 		},
 		{
 			desc:  "three truck",
@@ -70,13 +54,11 @@ func TestLastLocByTruck(t *testing.T) {
 
 			expectedHumanLabel: "InfluxDB3 last location by specific truck",
 			expectedHumanDesc:  "InfluxDB3 last location by specific truck: random    3 trucks",
-			expectedSQLQuery: `SELECT t.name AS name, t.driver AS driver, r.*
-		FROM tags t INNER JOIN LATERAL
-			(SELECT longitude, latitude
-			FROM readings r
-			WHERE r.tags_id=t.id
-			ORDER BY time DESC LIMIT 1)  r ON true
-		WHERE t.name IN ('truck_3','truck_5','truck_9')`,
+			expectedSQLQuery: `SELECT name, driver, latitude, longitude 
+		FROM readings 
+		WHERE name IN ('truck_9','truck_3','truck_5')
+		ORDER BY time 
+		LIMIT 1`,
 		},
 	}
 
@@ -96,29 +78,11 @@ func TestLastLocPerTruck(t *testing.T) {
 
 			expectedHumanLabel: "InfluxDB3 last location per truck",
 			expectedHumanDesc:  "InfluxDB3 last location per truck",
-			expectedSQLQuery: `SELECT t.name AS name, t.driver AS driver, r.*
-		FROM tags t INNER JOIN LATERAL
-			(SELECT longitude, latitude
-			FROM readings r
-			WHERE r.tags_id=t.id
-			ORDER BY time DESC LIMIT 1)  r ON true
-		WHERE t.name IS NOT NULL
-		AND t.fleet = 'South'`,
-		},
-
-		{
-			desc: "use JSON",
-
-			expectedHumanLabel: "InfluxDB3 last location per truck",
-			expectedHumanDesc:  "InfluxDB3 last location per truck",
-			expectedSQLQuery: `SELECT t.tagset->>'name' AS name, t.tagset->>'driver' AS driver, r.*
-		FROM tags t INNER JOIN LATERAL
-			(SELECT longitude, latitude
-			FROM readings r
-			WHERE r.tags_id=t.id
-			ORDER BY time DESC LIMIT 1)  r ON true
-		WHERE t.tagset->>'name' IS NOT NULL
-		AND t.tagset->>'fleet' = 'South'`,
+			expectedSQLQuery: `SELECT longitude, latitude
+		FROM readings
+		WHERE name IS NOT NULL
+		AND fleet = 'South'
+		ORDER BY time DESC LIMIT 1`,
 		},
 	}
 
@@ -146,31 +110,11 @@ func TestTrucksWithLowFuel(t *testing.T) {
 
 			expectedHumanLabel: "InfluxDB3 trucks with low fuel",
 			expectedHumanDesc:  "InfluxDB3 trucks with low fuel: under 10 percent",
-			expectedSQLQuery: `SELECT t.name AS name, t.driver AS driver, d.* 
-		FROM tags t INNER JOIN LATERAL 
-			(SELECT fuel_state 
-			FROM diagnostics d 
-			WHERE d.tags_id=t.id 
-			ORDER BY time DESC LIMIT 1) d ON true 
-		WHERE t.name IS NOT NULL
-		AND d.fuel_state < 0.1 
-		AND t.fleet = 'South'`,
-		},
-
-		{
-			desc: "use JSON",
-
-			expectedHumanLabel: "InfluxDB3 trucks with low fuel",
-			expectedHumanDesc:  "InfluxDB3 trucks with low fuel: under 10 percent",
-			expectedSQLQuery: `SELECT t.tagset->>'name' AS name, t.tagset->>'driver' AS driver, d.* 
-		FROM tags t INNER JOIN LATERAL 
-			(SELECT fuel_state 
-			FROM diagnostics d 
-			WHERE d.tags_id=t.id 
-			ORDER BY time DESC LIMIT 1) d ON true 
-		WHERE t.tagset->>'name' IS NOT NULL
-		AND d.fuel_state < 0.1 
-		AND t.tagset->>'fleet' = 'South'`,
+			expectedSQLQuery: `SELECT name, driver, fuel_state 
+		FROM diagnostics 
+		WHERE fuel_state < 0.1 
+		AND fleet = 'South'
+		ORDER BY time DESC LIMIT 1`,
 		},
 	}
 
@@ -198,31 +142,15 @@ func TestTrucksWithHighLoad(t *testing.T) {
 
 			expectedHumanLabel: "InfluxDB3 trucks with high load",
 			expectedHumanDesc:  "InfluxDB3 trucks with high load: over 90 percent",
-			expectedSQLQuery: `SELECT t.name AS name, t.driver AS driver, d.* 
-		FROM tags t INNER JOIN LATERAL 
-			(SELECT current_load 
-			FROM diagnostics d 
-			WHERE d.tags_id=t.id 
-			ORDER BY time DESC LIMIT 1) d ON true 
-		WHERE t.name IS NOT NULL
-		AND d.current_load/t.load_capacity > 0.9 
-		AND t.fleet = 'South'`,
-		},
-
-		{
-			desc: "use JSON",
-
-			expectedHumanLabel: "InfluxDB3 trucks with high load",
-			expectedHumanDesc:  "InfluxDB3 trucks with high load: over 90 percent",
-			expectedSQLQuery: `SELECT t.tagset->>'name' AS name, t.tagset->>'driver' AS driver, d.* 
-		FROM tags t INNER JOIN LATERAL 
-			(SELECT current_load 
-			FROM diagnostics d 
-			WHERE d.tags_id=t.id 
-			ORDER BY time DESC LIMIT 1) d ON true 
-		WHERE t.tagset->>'name' IS NOT NULL
-		AND d.current_load/t.tagset->>'load_capacity' > 0.9 
-		AND t.tagset->>'fleet' = 'South'`,
+			expectedSQLQuery: `SELECT name, driver, current_load, load_capacity 
+		FROM (SELECT  current_load, load_capacity 
+			FROM diagnostics WHERE fleet = 'South'
+			GROUP BY name, driver 
+			ORDER BY time DESC 
+			LIMIT 1) 
+		WHERE current_load >= 0.9 * load_capacity 
+		GROUP BY name 
+		ORDER BY time DESC`,
 		},
 	}
 
@@ -250,29 +178,12 @@ func TestStationaryTrucks(t *testing.T) {
 
 			expectedHumanLabel: "InfluxDB3 stationary trucks",
 			expectedHumanDesc:  "InfluxDB3 stationary trucks: with low avg velocity in last 10 minutes",
-			expectedSQLQuery: `SELECT t.name AS name, t.driver AS driver
-		FROM tags t 
-		INNER JOIN readings r ON r.tags_id = t.id 
+			expectedSQLQuery: `SELECT name, driver 
+		FROM readings 
 		WHERE time >= '1970-01-01 00:36:22.646325 +0000' AND time < '1970-01-01 00:46:22.646325 +0000'
-		AND t.name IS NOT NULL
-		AND t.fleet = 'West' 
-		GROUP BY 1, 2 
-		HAVING avg(r.velocity) < 1`,
-		},
-
-		{
-			desc: "use JSON",
-
-			expectedHumanLabel: "InfluxDB3 stationary trucks",
-			expectedHumanDesc:  "InfluxDB3 stationary trucks: with low avg velocity in last 10 minutes",
-			expectedSQLQuery: `SELECT t.tagset->>'name' AS name, t.tagset->>'driver' AS driver
-		FROM tags t 
-		INNER JOIN readings r ON r.tags_id = t.id 
-		WHERE time >= '1970-01-01 00:36:22.646325 +0000' AND time < '1970-01-01 00:46:22.646325 +0000'
-		AND t.tagset->>'name' IS NOT NULL
-		AND t.tagset->>'fleet' = 'West' 
-		GROUP BY 1, 2 
-		HAVING avg(r.velocity) < 1`,
+		AND fleet = 'West'
+		GROUP BY 1, 2  
+		HAVING avg(velocity) < 1`,
 		},
 	}
 
@@ -295,39 +206,18 @@ func TestTrucksWithLongDrivingSessions(t *testing.T) {
 
 			expectedHumanLabel: "InfluxDB3 trucks with longer driving sessions",
 			expectedHumanDesc:  "InfluxDB3 trucks with longer driving sessions: stopped less than 20 mins in 4 hour period",
-			expectedSQLQuery: `SELECT t.name AS name, t.driver AS driver
-		FROM tags t 
-		INNER JOIN LATERAL 
-			(SELECT  time_bucket('10 minutes', time) AS ten_minutes, tags_id  
+			expectedSQLQuery: `SELECT name, driver
+		FROM (
+			SELECT name, driver, time_bucket('10 minutes', time) AS ten_minutes
 			FROM readings 
 			WHERE time >= '1970-01-01 00:16:22.646325 +0000' AND time < '1970-01-01 04:16:22.646325 +0000'
-			GROUP BY ten_minutes, tags_id  
+			GROUP BY ten_minutes
 			HAVING avg(velocity) > 1 
-			ORDER BY ten_minutes, tags_id) AS r ON t.id = r.tags_id 
-		WHERE t.name IS NOT NULL
-		AND t.fleet = 'West'
-		GROUP BY name, driver 
-		HAVING count(r.ten_minutes) > 22`,
-		},
-
-		{
-			desc: "use JSON",
-
-			expectedHumanLabel: "InfluxDB3 trucks with longer driving sessions",
-			expectedHumanDesc:  "InfluxDB3 trucks with longer driving sessions: stopped less than 20 mins in 4 hour period",
-			expectedSQLQuery: `SELECT t.tagset->>'name' AS name, t.tagset->>'driver' AS driver
-		FROM tags t 
-		INNER JOIN LATERAL 
-			(SELECT  time_bucket('10 minutes', time) AS ten_minutes, tags_id  
-			FROM readings 
-			WHERE time >= '1970-01-01 00:16:22.646325 +0000' AND time < '1970-01-01 04:16:22.646325 +0000'
-			GROUP BY ten_minutes, tags_id  
-			HAVING avg(velocity) > 1 
-			ORDER BY ten_minutes, tags_id) AS r ON t.id = r.tags_id 
-		WHERE t.tagset->>'name' IS NOT NULL
-		AND t.tagset->>'fleet' = 'West'
-		GROUP BY name, driver 
-		HAVING count(r.ten_minutes) > 22`,
+			ORDER BY ten_minutes
+		)
+		WHERE fleet = 'West'
+		GROUP BY name, driver
+		HAVING count(ten_minutes) > 22`,
 		},
 	}
 
@@ -355,39 +245,18 @@ func TestTrucksWithLongDailySessions(t *testing.T) {
 
 			expectedHumanLabel: "InfluxDB3 trucks with longer daily sessions",
 			expectedHumanDesc:  "InfluxDB3 trucks with longer daily sessions: drove more than 10 hours in the last 24 hours",
-			expectedSQLQuery: `SELECT t.name AS name, t.driver AS driver
-		FROM tags t 
-		INNER JOIN LATERAL 
-			(SELECT  time_bucket('10 minutes', time) AS ten_minutes, tags_id  
+			expectedSQLQuery: `SELECT name, driver
+		FROM (
+			SELECT name, driver, time_bucket('10 minutes', time) AS ten_minutes 
 			FROM readings 
 			WHERE time >= '1970-01-01 00:16:22.646325 +0000' AND time < '1970-01-02 00:16:22.646325 +0000'
-			GROUP BY ten_minutes, tags_id  
+			GROUP BY ten_minutes
 			HAVING avg(velocity) > 1 
-			ORDER BY ten_minutes, tags_id) AS r ON t.id = r.tags_id 
-		WHERE t.name IS NOT NULL
-		AND t.fleet = 'West'
+			ORDER BY ten_minutes
+		)
+		WHERE fleet = 'West'
 		GROUP BY name, driver 
-		HAVING count(r.ten_minutes) > 60`,
-		},
-
-		{
-			desc: "use JSON",
-
-			expectedHumanLabel: "InfluxDB3 trucks with longer daily sessions",
-			expectedHumanDesc:  "InfluxDB3 trucks with longer daily sessions: drove more than 10 hours in the last 24 hours",
-			expectedSQLQuery: `SELECT t.tagset->>'name' AS name, t.tagset->>'driver' AS driver
-		FROM tags t 
-		INNER JOIN LATERAL 
-			(SELECT  time_bucket('10 minutes', time) AS ten_minutes, tags_id  
-			FROM readings 
-			WHERE time >= '1970-01-01 00:16:22.646325 +0000' AND time < '1970-01-02 00:16:22.646325 +0000'
-			GROUP BY ten_minutes, tags_id  
-			HAVING avg(velocity) > 1 
-			ORDER BY ten_minutes, tags_id) AS r ON t.id = r.tags_id 
-		WHERE t.tagset->>'name' IS NOT NULL
-		AND t.tagset->>'fleet' = 'West'
-		GROUP BY name, driver 
-		HAVING count(r.ten_minutes) > 60`,
+		HAVING count(ten_minutes) > 60`,
 		},
 	}
 
@@ -416,28 +285,10 @@ func TestAvgVsProjectedFuelConsumption(t *testing.T) {
 			expectedHumanLabel: "InfluxDB3 average vs projected fuel consumption per fleet",
 			expectedHumanDesc:  "InfluxDB3 average vs projected fuel consumption per fleet",
 
-			expectedSQLQuery: `SELECT t.fleet AS fleet, avg(r.fuel_consumption) AS avg_fuel_consumption, 
-		avg(t.nominal_fuel_consumption) AS projected_fuel_consumption
-		FROM tags t
-		INNER JOIN LATERAL(SELECT tags_id, fuel_consumption FROM readings r WHERE r.tags_id = t.id AND velocity > 1) r ON true
-		WHERE t.fleet IS NOT NULL
-		AND t.nominal_fuel_consumption IS NOT NULL 
-		AND t.name IS NOT NULL
-		GROUP BY fleet`,
-		},
-
-		{
-			desc: "use JSON",
-
-			expectedHumanLabel: "InfluxDB3 average vs projected fuel consumption per fleet",
-			expectedHumanDesc:  "InfluxDB3 average vs projected fuel consumption per fleet",
-			expectedSQLQuery: `SELECT t.tagset->>'fleet' AS fleet, avg(r.fuel_consumption) AS avg_fuel_consumption, 
-		avg(t.tagset->>'nominal_fuel_consumption') AS projected_fuel_consumption
-		FROM tags t
-		INNER JOIN LATERAL(SELECT tags_id, fuel_consumption FROM readings r WHERE r.tags_id = t.id AND velocity > 1) r ON true
-		WHERE t.tagset->>'fleet' IS NOT NULL
-		AND t.tagset->>'nominal_fuel_consumption' IS NOT NULL 
-		AND t.tagset->>'name' IS NOT NULL
+			expectedSQLQuery: `SELECT fleet, avg(fuel_consumption) AS avg_fuel_consumption, 
+		avg(nominal_fuel_consumption) AS projected_fuel_consumption
+		FROM readings
+		WHERE velocity > 1 
 		GROUP BY fleet`,
 		},
 	}
@@ -468,42 +319,18 @@ func TestAvgDailyDrivingDuration(t *testing.T) {
 			expectedHumanDesc:  "InfluxDB3 average driver driving duration per day",
 			expectedSQLQuery: `WITH ten_minute_driving_sessions
 		AS (
-			SELECT time_bucket('10 minutes', TIME) AS ten_minutes, tags_id
-			FROM readings r
-			GROUP BY tags_id, ten_minutes
+			SELECT time_bucket('10 minutes', TIME) AS ten_minutes
+			FROM readings
+			GROUP BY ten_minutes
 			HAVING avg(velocity) > 1
 			), daily_total_session
 		AS (
-			SELECT time_bucket('24 hours', ten_minutes) AS day, tags_id, count(*) / 6 AS hours
+			SELECT time_bucket('24 hours', ten_minutes) AS day, count(*) / 6 AS hours
 			FROM ten_minute_driving_sessions
-			GROUP BY day, tags_id
+			GROUP BY day
 			)
-		SELECT t.fleet AS fleet, t.name AS name, t.driver AS driver, avg(d.hours) AS avg_daily_hours
-		FROM daily_total_session d
-		INNER JOIN tags t ON t.id = d.tags_id
-		GROUP BY fleet, name, driver`,
-		},
-
-		{
-			desc: "use JSON",
-
-			expectedHumanLabel: "InfluxDB3 average driver driving duration per day",
-			expectedHumanDesc:  "InfluxDB3 average driver driving duration per day",
-			expectedSQLQuery: `WITH ten_minute_driving_sessions
-		AS (
-			SELECT time_bucket('10 minutes', TIME) AS ten_minutes, tags_id
-			FROM readings r
-			GROUP BY tags_id, ten_minutes
-			HAVING avg(velocity) > 1
-			), daily_total_session
-		AS (
-			SELECT time_bucket('24 hours', ten_minutes) AS day, tags_id, count(*) / 6 AS hours
-			FROM ten_minute_driving_sessions
-			GROUP BY day, tags_id
-			)
-		SELECT t.tagset->>'fleet' AS fleet, t.tagset->>'name' AS name, t.tagset->>'driver' AS driver, avg(d.hours) AS avg_daily_hours
-		FROM daily_total_session d
-		INNER JOIN tags t ON t.id = d.tags_id
+		SELECT fleet, name, driver, avg(hours) AS avg_daily_hours
+		FROM daily_total_session
 		GROUP BY fleet, name, driver`,
 		},
 	}
@@ -535,53 +362,22 @@ func TestAvgDailyDrivingSession(t *testing.T) {
 
 			expectedSQLQuery: `WITH driver_status
 		AS (
-			SELECT tags_id, time_bucket('10 mins', TIME) AS ten_minutes, avg(velocity) > 5 AS driving
+			SELECT name, time_bucket('10 mins', TIME) AS ten_minutes, avg(velocity) > 5 AS driving
 			FROM readings
-			GROUP BY tags_id, ten_minutes
-			ORDER BY tags_id, ten_minutes
+			GROUP BY ten_minutes
+			ORDER BY ten_minutes
 			), driver_status_change
 		AS (
-			SELECT tags_id, ten_minutes AS start, lead(ten_minutes) OVER (PARTITION BY tags_id ORDER BY ten_minutes) AS stop, driving
+			SELECT name, ten_minutes AS start, lead(ten_minutes) OVER (ORDER BY ten_minutes) AS stop, driving
 			FROM (
-				SELECT tags_id, ten_minutes, driving, lag(driving) OVER (PARTITION BY tags_id ORDER BY ten_minutes) AS prev_driving
+				SELECT ten_minutes, driving, lag(driving) OVER (ORDER BY ten_minutes) AS prev_driving
 				FROM driver_status
 				) x
 			WHERE x.driving <> x.prev_driving
 			)
-		SELECT t.name AS name, time_bucket('24 hours', start) AS day, avg(age(stop, start)) AS duration
-		FROM tags t
-		INNER JOIN driver_status_change d ON t.id = d.tags_id
-		WHERE t.name IS NOT NULL
-		AND d.driving = true
-		GROUP BY name, day
-		ORDER BY name, day`,
-		},
-
-		{
-			desc: "use JSON",
-
-			expectedHumanLabel: "InfluxDB3 average driver driving session without stopping per day",
-			expectedHumanDesc:  "InfluxDB3 average driver driving session without stopping per day",
-			expectedSQLQuery: `WITH driver_status
-		AS (
-			SELECT tags_id, time_bucket('10 mins', TIME) AS ten_minutes, avg(velocity) > 5 AS driving
-			FROM readings
-			GROUP BY tags_id, ten_minutes
-			ORDER BY tags_id, ten_minutes
-			), driver_status_change
-		AS (
-			SELECT tags_id, ten_minutes AS start, lead(ten_minutes) OVER (PARTITION BY tags_id ORDER BY ten_minutes) AS stop, driving
-			FROM (
-				SELECT tags_id, ten_minutes, driving, lag(driving) OVER (PARTITION BY tags_id ORDER BY ten_minutes) AS prev_driving
-				FROM driver_status
-				) x
-			WHERE x.driving <> x.prev_driving
-			)
-		SELECT t.tagset->>'name' AS name, time_bucket('24 hours', start) AS day, avg(age(stop, start)) AS duration
-		FROM tags t
-		INNER JOIN driver_status_change d ON t.id = d.tags_id
-		WHERE t.tagset->>'name' IS NOT NULL
-		AND d.driving = true
+		SELECT name, time_bucket('24 hours', start) AS day, avg(age(stop, start)) AS duration
+		FROM driver_status_change
+		WHERE driving = true
 		GROUP BY name, day
 		ORDER BY name, day`,
 		},
@@ -611,30 +407,8 @@ func TestAvgLoad(t *testing.T) {
 
 			expectedHumanLabel: "InfluxDB3 average load per truck model per fleet",
 			expectedHumanDesc:  "InfluxDB3 average load per truck model per fleet",
-			expectedSQLQuery: `SELECT t.fleet AS fleet, t.model AS model, t.load_capacity AS load_capacity, avg(d.avg_load / t.load_capacity) AS avg_load_percentage
-		FROM tags t
-		INNER JOIN (
-			SELECT tags_id, avg(current_load) AS avg_load
-			FROM diagnostics d
-			GROUP BY tags_id
-			) d ON t.id = d.tags_id
-		WHERE t.name IS NOT NULL
-		GROUP BY fleet, model, load_capacity`,
-		},
-
-		{
-			desc: "use JSON",
-
-			expectedHumanLabel: "InfluxDB3 average load per truck model per fleet",
-			expectedHumanDesc:  "InfluxDB3 average load per truck model per fleet",
-			expectedSQLQuery: `SELECT t.tagset->>'fleet' AS fleet, t.tagset->>'model' AS model, t.tagset->>'load_capacity' AS load_capacity, avg(d.avg_load / t.tagset->>'load_capacity') AS avg_load_percentage
-		FROM tags t
-		INNER JOIN (
-			SELECT tags_id, avg(current_load) AS avg_load
-			FROM diagnostics d
-			GROUP BY tags_id
-			) d ON t.id = d.tags_id
-		WHERE t.tagset->>'name' IS NOT NULL
+			expectedSQLQuery: `SELECT fleet, model, load_capacity, avg(avg(current_load) / load_capacity) AS avg_load_percentage
+		FROM diagnostics
 		GROUP BY fleet, model, load_capacity`,
 		},
 	}
@@ -663,35 +437,15 @@ func TestDailyTruckActivity(t *testing.T) {
 
 			expectedHumanLabel: "InfluxDB3 daily truck activity per fleet per model",
 			expectedHumanDesc:  "InfluxDB3 daily truck activity per fleet per model",
-			expectedSQLQuery: `SELECT t.fleet AS fleet, t.model AS model, y.day, sum(y.ten_mins_per_day) / 144 AS daily_activity
-		FROM tags t
-		INNER JOIN (
-			SELECT time_bucket('24 hours', TIME) AS day, time_bucket('10 minutes', TIME) AS ten_minutes, tags_id, count(*) AS ten_mins_per_day
+			expectedSQLQuery: `SELECT fleet, model, day, sum(ten_mins_per_day) / 144 AS daily_activity
+		FROM (
+			SELECT time_bucket('24 hours', TIME) AS day, time_bucket('10 minutes', TIME) AS ten_minutes, count(*) AS ten_mins_per_day
 			FROM diagnostics
-			GROUP BY day, ten_minutes, tags_id
+			GROUP BY day, ten_minutes
 			HAVING avg(STATUS) < 1
-			) y ON y.tags_id = t.id
-		WHERE t.name IS NOT NULL
-		GROUP BY fleet, model, y.day
-		ORDER BY y.day`,
-		},
-
-		{
-			desc: "use JSON",
-
-			expectedHumanLabel: "InfluxDB3 daily truck activity per fleet per model",
-			expectedHumanDesc:  "InfluxDB3 daily truck activity per fleet per model",
-			expectedSQLQuery: `SELECT t.tagset->>'fleet' AS fleet, t.tagset->>'model' AS model, y.day, sum(y.ten_mins_per_day) / 144 AS daily_activity
-		FROM tags t
-		INNER JOIN (
-			SELECT time_bucket('24 hours', TIME) AS day, time_bucket('10 minutes', TIME) AS ten_minutes, tags_id, count(*) AS ten_mins_per_day
-			FROM diagnostics
-			GROUP BY day, ten_minutes, tags_id
-			HAVING avg(STATUS) < 1
-			) y ON y.tags_id = t.id
-		WHERE t.tagset->>'name' IS NOT NULL
-		GROUP BY fleet, model, y.day
-		ORDER BY y.day`,
+		)
+		GROUP BY fleet, model, day
+		ORDER BY day`,
 		},
 	}
 
@@ -721,46 +475,17 @@ func TestTruckBreakdownFrequency(t *testing.T) {
 			expectedHumanDesc:  "InfluxDB3 truck breakdown frequency per model",
 			expectedSQLQuery: `WITH breakdown_per_truck_per_ten_minutes
 		AS (
-			SELECT time_bucket('10 minutes', TIME) AS ten_minutes, tags_id, count(STATUS = 0) / count(*) >= 0.5 AS broken_down
+			SELECT time_bucket('10 minutes', TIME) AS ten_minutes, count(STATUS = 0) / count(*) >= 0.5 AS broken_down
 			FROM diagnostics
-			GROUP BY ten_minutes, tags_id
+			GROUP BY ten_minutes
 			), breakdowns_per_truck
 		AS (
-			SELECT ten_minutes, tags_id, broken_down, lead(broken_down) OVER (
-					PARTITION BY tags_id ORDER BY ten_minutes
-					) AS next_broken_down
+			SELECT ten_minutes, broken_down, lead(broken_down) OVER (ORDER BY ten_minutes) AS next_broken_down
 			FROM breakdown_per_truck_per_ten_minutes
 			)
-		SELECT t.model AS model, count(*)
-		FROM tags t
-		INNER JOIN breakdowns_per_truck b ON t.id = b.tags_id
-		WHERE t.name IS NOT NULL
-		AND broken_down = false AND next_broken_down = true
-		GROUP BY model`,
-		},
-
-		{
-			desc: "use JSON",
-
-			expectedHumanLabel: "InfluxDB3 truck breakdown frequency per model",
-			expectedHumanDesc:  "InfluxDB3 truck breakdown frequency per model",
-			expectedSQLQuery: `WITH breakdown_per_truck_per_ten_minutes
-		AS (
-			SELECT time_bucket('10 minutes', TIME) AS ten_minutes, tags_id, count(STATUS = 0) / count(*) >= 0.5 AS broken_down
-			FROM diagnostics
-			GROUP BY ten_minutes, tags_id
-			), breakdowns_per_truck
-		AS (
-			SELECT ten_minutes, tags_id, broken_down, lead(broken_down) OVER (
-					PARTITION BY tags_id ORDER BY ten_minutes
-					) AS next_broken_down
-			FROM breakdown_per_truck_per_ten_minutes
-			)
-		SELECT t.tagset->>'model' AS model, count(*)
-		FROM tags t
-		INNER JOIN breakdowns_per_truck b ON t.id = b.tags_id
-		WHERE t.tagset->>'name' IS NOT NULL
-		AND broken_down = false AND next_broken_down = true
+		SELECT model, count(*)
+		FROM breakdowns_per_truck
+		WHERE broken_down = false AND next_broken_down = true
 		GROUP BY model`,
 		},
 	}
