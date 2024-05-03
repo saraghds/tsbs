@@ -1,7 +1,6 @@
 package query
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"sort"
@@ -21,17 +20,6 @@ type Stat struct {
 	value     float64
 	isWarm    bool
 	isPartial bool
-}
-
-type StatJson struct {
-	Key    string  `json:"key"`
-	Min    float64 `json:"min"`
-	Median float64 `json:"median"`
-	Mean   float64 `json:"mean"`
-	Max    float64 `json:"max"`
-	StdDev float64 `json:"std_dev"`
-	Sum    float64 `json:"sum"`
-	Count  int64   `json:"count"`
 }
 
 var statPool = &sync.Pool{
@@ -114,32 +102,8 @@ func (s *statGroup) string() string {
 		s.count)
 }
 
-func (s *statGroup) jsonString(key string) string {
-	statJson := StatJson{
-		Key:    key,
-		Min:    s.Min(),
-		Median: s.Median(),
-		Mean:   s.Mean(),
-		Max:    s.Max(),
-		StdDev: s.StdDev(),
-		Sum:    s.sum / hdrScaleFactor,
-		Count:  s.count,
-	}
-	marshaled, err := json.MarshalIndent(statJson, "", "   ")
-	if err != nil {
-		fmt.Printf("marshaling error: %s", err)
-		return ""
-	}
-	return string(marshaled)
-}
-
-func (s *statGroup) write(w io.Writer, key string, jsonFormat bool) error {
-	var err error
-	if jsonFormat {
-		_, err = fmt.Fprintln(w, s.jsonString(key))
-	} else {
-		_, err = fmt.Fprintln(w, s.string())
-	}
+func (s *statGroup) write(w io.Writer) error {
+	_, err := fmt.Fprintln(w, s.string())
 	return err
 }
 
@@ -170,7 +134,7 @@ func (s *statGroup) StdDev() float64 {
 
 // writeStatGroupMap writes a map of StatGroups in an ordered fashion by
 // key that they are stored by
-func writeStatGroupMap(w io.Writer, statGroups map[string]*statGroup, jsonFormat bool) error {
+func writeStatGroupMap(w io.Writer, statGroups map[string]*statGroup) error {
 	maxKeyLength := 0
 	keys := make([]string, 0, len(statGroups))
 	for k := range statGroups {
@@ -192,7 +156,7 @@ func writeStatGroupMap(w io.Writer, statGroups map[string]*statGroup, jsonFormat
 			return err
 		}
 
-		err = v.write(w, k, jsonFormat)
+		err = v.write(w)
 		if err != nil {
 			return err
 		}

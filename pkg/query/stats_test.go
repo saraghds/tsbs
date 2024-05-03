@@ -264,7 +264,7 @@ func (w *errWriter) Write(p []byte) (int, error) {
 func TestWrite(t *testing.T) {
 	var buf bytes.Buffer
 	sg := newStatGroup(0)
-	err := sg.write(&buf, "", false)
+	err := sg.write(&buf)
 	if err != nil {
 		t.Errorf("unexpected error for write: %v", err)
 	}
@@ -275,7 +275,7 @@ func TestWrite(t *testing.T) {
 	}
 
 	// Test error case
-	err = sg.write(&errWriter{}, "", false)
+	err = sg.write(&errWriter{})
 	if err == nil {
 		t.Errorf("expected error but did not get one")
 	}
@@ -340,7 +340,7 @@ func TestWriteStatGroupMap(t *testing.T) {
 		} else {
 			w = bytes.NewBuffer([]byte{})
 		}
-		err := writeStatGroupMap(w, m, false)
+		err := writeStatGroupMap(w, m)
 		if shouldErr {
 			ew := w.(*errWriter)
 			if err == nil {
