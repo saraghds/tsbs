@@ -112,7 +112,8 @@ func TestTrucksWithLowFuel(t *testing.T) {
 			expectedHumanDesc:  "InfluxDB3 trucks with low fuel: under 10 percent",
 			expectedSQLQuery: `SELECT name, driver, fuel_state 
 		FROM diagnostics 
-		WHERE fuel_state < 0.1 
+		WHERE name IS NOT NULL
+		AND fuel_state < 0.1 
 		AND fleet = 'South'
 		ORDER BY time DESC LIMIT 1`,
 		},
@@ -142,13 +143,11 @@ func TestTrucksWithHighLoad(t *testing.T) {
 
 			expectedHumanLabel: "InfluxDB3 trucks with high load",
 			expectedHumanDesc:  "InfluxDB3 trucks with high load: over 90 percent",
-			expectedSQLQuery: `SELECT name, driver, current_load, load_capacity 
-		FROM (SELECT  current_load, load_capacity 
-			FROM diagnostics WHERE fleet = 'South'
-			GROUP BY name, driver 
-			ORDER BY time DESC 
-			LIMIT 1) 
-		WHERE current_load >= 0.9 * load_capacity 
+			expectedSQLQuery: `SELECT name, driver, current_load, load_capacity, time
+		FROM diagnostics
+		WHERE name IS NOT NULL 
+		AND fleet = 'South'
+		AND current_load >= 0.9 * load_capacity 
 		ORDER BY time DESC`,
 		},
 	}
@@ -181,6 +180,7 @@ func TestStationaryTrucks(t *testing.T) {
 		FROM readings 
 		WHERE time >= '1970-01-01 00:36:22.646325 +0000' AND time < '1970-01-01 00:46:22.646325 +0000'
 		AND fleet = 'West'
+		AND name IS NOT NULL
 		GROUP BY 1, 2  
 		HAVING avg(velocity) < 1`,
 		},
@@ -210,11 +210,12 @@ func TestTrucksWithLongDrivingSessions(t *testing.T) {
 			SELECT name, driver, to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes
 			FROM readings 
 			WHERE time >= '1970-01-01 00:16:22.646325 +0000' AND time < '1970-01-01 04:16:22.646325 +0000'
-			GROUP BY ten_minutes
+			AND fleet = 'West'
+			AND name IS NOT NULL
+			GROUP BY name, driver, ten_minutes
 			HAVING avg(velocity) > 1 
 			ORDER BY ten_minutes
 		)
-		WHERE fleet = 'West'
 		GROUP BY name, driver
 		HAVING count(ten_minutes) > 22`,
 		},
@@ -249,11 +250,12 @@ func TestTrucksWithLongDailySessions(t *testing.T) {
 			SELECT name, driver, to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes 
 			FROM readings 
 			WHERE time >= '1970-01-01 00:16:22.646325 +0000' AND time < '1970-01-02 00:16:22.646325 +0000'
-			GROUP BY ten_minutes
+			AND fleet = 'West'
+			AND name IS NOT NULL
+			GROUP BY name, driver, ten_minutes
 			HAVING avg(velocity) > 1 
 			ORDER BY ten_minutes
 		)
-		WHERE fleet = 'West'
 		GROUP BY name, driver 
 		HAVING count(ten_minutes) > 60`,
 		},
@@ -288,6 +290,9 @@ func TestAvgVsProjectedFuelConsumption(t *testing.T) {
 		avg(nominal_fuel_consumption) AS projected_fuel_consumption
 		FROM readings
 		WHERE velocity > 1 
+		AND name IS NOT NULL
+		AND nominal_fuel_consumption IS NOT NULL
+		AND fleet IS NOT NULL
 		GROUP BY fleet`,
 		},
 	}
@@ -318,15 +323,15 @@ func TestAvgDailyDrivingDuration(t *testing.T) {
 			expectedHumanDesc:  "InfluxDB3 average driver driving duration per day",
 			expectedSQLQuery: `WITH ten_minute_driving_sessions
 		AS (
-			SELECT to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes
+			SELECT fleet, name, driver, to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes
 			FROM readings
-			GROUP BY ten_minutes
+			GROUP BY fleet, name, driver, ten_minutes
 			HAVING avg(velocity) > 1
 			), daily_total_session
 		AS (
-			SELECT to_timestamp(((extract(epoch from ten_minutes)::int)/86400)*86400) AS day, count(*) / 6 AS hours
+			SELECT fleet, name, driver, to_timestamp(((extract(epoch from ten_minutes)::int)/86400)*86400) AS day, count(*) / 6 AS hours
 			FROM ten_minute_driving_sessions
-			GROUP BY day
+			GROUP BY fleet, name, driver, day
 			)
 		SELECT fleet, name, driver, avg(hours) AS avg_daily_hours
 		FROM daily_total_session
@@ -363,20 +368,21 @@ func TestAvgDailyDrivingSession(t *testing.T) {
 		AS (
 			SELECT name, to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes, avg(velocity) > 5 AS driving
 			FROM readings
-			GROUP BY ten_minutes
+			GROUP BY name, ten_minutes
 			ORDER BY ten_minutes
 			), driver_status_change
 		AS (
 			SELECT name, ten_minutes AS start, lead(ten_minutes) OVER (ORDER BY ten_minutes) AS stop, driving
 			FROM (
-				SELECT ten_minutes, driving, lag(driving) OVER (ORDER BY ten_minutes) AS prev_driving
+				SELECT name, ten_minutes, driving, lag(driving) OVER (ORDER BY ten_minutes) AS prev_driving
 				FROM driver_status
 				) x
 			WHERE x.driving <> x.prev_driving
 			)
-		SELECT name, to_timestamp(((extract(epoch from start)::int)/86400)*86400) AS day, avg(age(stop, start)) AS duration
+		SELECT name, to_timestamp(((extract(epoch from start)::int)/86400)*86400) AS day, avg(date_part('nanosecond', stop) - date_part('nanosecond', start)) AS duration
 		FROM driver_status_change
 		WHERE driving = true
+		AND name IS NOT NULL
 		GROUP BY name, day
 		ORDER BY name, day`,
 		},
@@ -442,9 +448,9 @@ func TestDailyTruckActivity(t *testing.T) {
 			expectedHumanDesc:  "InfluxDB3 daily truck activity per fleet per model",
 			expectedSQLQuery: `SELECT fleet, model, day, sum(ten_mins_per_day) / 144 AS daily_activity
 		FROM (
-			SELECT to_timestamp(((extract(epoch from time)::int)/86400)*86400) AS day, to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes, count(*) AS ten_mins_per_day
+			SELECT fleet, model, to_timestamp(((extract(epoch from time)::int)/86400)*86400) AS day, to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes, count(*) AS ten_mins_per_day
 			FROM diagnostics
-			GROUP BY day, ten_minutes
+			GROUP BY fleet, model, day, ten_minutes
 			HAVING avg(STATUS) < 1
 		)
 		GROUP BY fleet, model, day
@@ -478,12 +484,12 @@ func TestTruckBreakdownFrequency(t *testing.T) {
 			expectedHumanDesc:  "InfluxDB3 truck breakdown frequency per model",
 			expectedSQLQuery: `WITH breakdown_per_truck_per_ten_minutes
 		AS (
-			SELECT to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes, count(STATUS = 0) / count(*) >= 0.5 AS broken_down
+			SELECT model, to_timestamp(((extract(epoch from time)::int)/600)*600) AS ten_minutes, count(STATUS = 0) / count(*) >= 0.5 AS broken_down
 			FROM diagnostics
-			GROUP BY ten_minutes
+			GROUP BY model, ten_minutes
 			), breakdowns_per_truck
 		AS (
-			SELECT ten_minutes, broken_down, lead(broken_down) OVER (ORDER BY ten_minutes) AS next_broken_down
+			SELECT model, ten_minutes, broken_down, lead(broken_down) OVER (ORDER BY ten_minutes) AS next_broken_down
 			FROM breakdown_per_truck_per_ten_minutes
 			)
 		SELECT model, count(*)

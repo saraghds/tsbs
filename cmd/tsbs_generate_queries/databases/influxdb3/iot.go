@@ -98,11 +98,11 @@ func (i *IoT) TrucksWithLowFuel(qi query.Query) {
 // TrucksWithHighLoad finds all trucks that have load over 90%.
 func (i *IoT) TrucksWithHighLoad(qi query.Query) {
 	sql := fmt.Sprintf(`SELECT name, driver, current_load, load_capacity, time
-			FROM diagnostics
-			WHERE name IS NOT NULL 
-			AND fleet = '%s'
-			AND current_load >= 0.9 * load_capacity 
-			ORDER BY time DESC`,
+		FROM diagnostics
+		WHERE name IS NOT NULL 
+		AND fleet = '%s'
+		AND current_load >= 0.9 * load_capacity 
+		ORDER BY time DESC`,
 		i.GetRandomFleet())
 
 	humanLabel := "InfluxDB3 trucks with high load"
