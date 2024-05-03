@@ -38,6 +38,7 @@ type BenchmarkRunnerConfig struct {
 	PrintInterval    uint64 `mapstructure:"print-interval"`
 	PrewarmQueries   bool   `mapstructure:"prewarm-queries"`
 	ResultsFile      string `mapstructure:"results-file"`
+	JsonFormat       bool   `mapstructure:"json-format"`
 }
 
 // AddToFlagSet adds command line flags needed by the BenchmarkRunnerConfig to the flag set.
@@ -78,6 +79,7 @@ func NewBenchmarkRunner(config BenchmarkRunnerConfig) *BenchmarkRunner {
 		prewarmQueries:   runner.PrewarmQueries,
 		burnIn:           runner.BurnIn,
 		hdrLatenciesFile: runner.HDRLatenciesFile,
+		jsonFormat:       config.JsonFormat,
 	}
 
 	runner.sp = newStatProcessor(spArgs)

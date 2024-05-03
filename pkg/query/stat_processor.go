@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/HdrHistogram/hdrhistogram-go"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/HdrHistogram/hdrhistogram-go"
 )
 
 // statProcessor is used to collect, analyze, and print query execution statistics.
@@ -30,6 +31,7 @@ type statProcessorArgs struct {
 	burnIn           uint64  // burnIn is the number of statistics to ignore before analyzing
 	printInterval    uint64  // printInterval is how often print intermediate stats (number of queries)
 	hdrLatenciesFile string  // hdrLatenciesFile is the filename to Write the High Dynamic Range (HDR) Histogram of Response Latencies to
+	jsonFormat       bool    // true if the json format needs to be printed
 
 }
 
@@ -152,7 +154,7 @@ func (sp *defaultStatProcessor) process(workers uint) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			err = writeStatGroupMap(os.Stderr, sp.statMapping)
+			err = writeStatGroupMap(os.Stderr, sp.statMapping, sp.args.jsonFormat)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -171,7 +173,7 @@ func (sp *defaultStatProcessor) process(workers uint) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = writeStatGroupMap(os.Stdout, sp.statMapping)
+	err = writeStatGroupMap(os.Stdout, sp.statMapping, sp.args.jsonFormat)
 	if err != nil {
 		log.Fatal(err)
 	}

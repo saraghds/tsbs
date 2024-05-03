@@ -25,7 +25,6 @@ var (
 	token    string
 	bucket   string
 	database string
-	secure   bool
 )
 
 // Global vars:
@@ -43,7 +42,6 @@ func init() {
 	pflag.String("token", "token", "Token")
 	pflag.String("bucket", "", "Bucket name for serverless")
 	pflag.String("database", "", "Database name for dedicated")
-	pflag.Bool("secure", false, "Secure transport credentials")
 
 	pflag.Parse()
 
@@ -62,7 +60,6 @@ func init() {
 	token = viper.GetString("token")
 	bucket = viper.GetString("bucket")
 	database = viper.GetString("database")
-	secure = viper.GetBool("secure")
 
 	runner = query.NewBenchmarkRunner(config)
 }
