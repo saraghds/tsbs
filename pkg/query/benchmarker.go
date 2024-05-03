@@ -56,6 +56,7 @@ func (c BenchmarkRunnerConfig) AddToFlagSet(fs *pflag.FlagSet) {
 	fs.Int("debug", 0, "Whether to print debug messages.")
 	fs.String("file", "", "File name to read queries from")
 	fs.String("results-file", "", "Write the test results summary json to this file")
+	fs.Bool("json-format", false, "Print responses in JSON format (default false).")
 }
 
 // BenchmarkRunner contains the common components for running a query benchmarking
