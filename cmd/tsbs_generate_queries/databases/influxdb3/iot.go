@@ -83,7 +83,8 @@ func (i *IoT) LastLocPerTruck(qi query.Query) {
 func (i *IoT) TrucksWithLowFuel(qi query.Query) {
 	sql := fmt.Sprintf(`SELECT name, driver, fuel_state 
 		FROM diagnostics 
-		WHERE fuel_state < 0.1 
+		WHERE name IS NOT NULL
+		AND fuel_state < 0.1 
 		AND fleet = '%s'
 		ORDER BY time DESC LIMIT 1`,
 		i.GetRandomFleet())
@@ -102,7 +103,8 @@ func (i *IoT) TrucksWithHighLoad(qi query.Query) {
 			GROUP BY name, driver 
 			ORDER BY time DESC 
 			LIMIT 1) 
-		WHERE current_load >= 0.9 * load_capacity 
+		WHERE name IS NOT NULL 
+		AND current_load >= 0.9 * load_capacity 
 		ORDER BY time DESC`,
 		i.GetRandomFleet())
 
@@ -119,6 +121,7 @@ func (i *IoT) StationaryTrucks(qi query.Query) {
 		FROM readings 
 		WHERE time >= '%s' AND time < '%s'
 		AND fleet = '%s'
+		AND name IS NOT NULL
 		GROUP BY 1, 2  
 		HAVING avg(velocity) < 1`,
 		interval.Start().Format(goTimeFmt),
@@ -138,11 +141,12 @@ func (i *IoT) TrucksWithLongDrivingSessions(qi query.Query) {
 			SELECT name, driver, %s AS ten_minutes
 			FROM readings 
 			WHERE time >= '%s' AND time < '%s'
-			GROUP BY ten_minutes
+			AND fleet = '%s'
+			AND name IS NOT NULL
+			GROUP BY name, driver, ten_minutes
 			HAVING avg(velocity) > 1 
 			ORDER BY ten_minutes
 		)
-		WHERE fleet = '%s'
 		GROUP BY name, driver
 		HAVING count(ten_minutes) > %d`,
 		getNonTimeBucket("time", 10*time.Minute),
@@ -166,11 +170,12 @@ func (i *IoT) TrucksWithLongDailySessions(qi query.Query) {
 			SELECT name, driver, %s AS ten_minutes 
 			FROM readings 
 			WHERE time >= '%s' AND time < '%s'
-			GROUP BY ten_minutes
+			AND fleet = '%s'
+			AND name IS NOT NULL
+			GROUP BY name, driver, ten_minutes
 			HAVING avg(velocity) > 1 
 			ORDER BY ten_minutes
 		)
-		WHERE fleet = '%s'
 		GROUP BY name, driver 
 		HAVING count(ten_minutes) > %d`,
 		getNonTimeBucket("time", 10*time.Minute),
@@ -192,6 +197,9 @@ func (i *IoT) AvgVsProjectedFuelConsumption(qi query.Query) {
 		avg(nominal_fuel_consumption) AS projected_fuel_consumption
 		FROM readings
 		WHERE velocity > 1 
+		AND name IS NOT NULL
+		AND nominal_fuel_consumption IS NOT NULL
+		AND fleet IS NOT NULL
 		GROUP BY fleet`
 
 	humanLabel := "InfluxDB3 average vs projected fuel consumption per fleet"
@@ -204,15 +212,15 @@ func (i *IoT) AvgVsProjectedFuelConsumption(qi query.Query) {
 func (i *IoT) AvgDailyDrivingDuration(qi query.Query) {
 	sql := fmt.Sprintf(`WITH ten_minute_driving_sessions
 		AS (
-			SELECT %s AS ten_minutes
+			SELECT fleet, name, driver, %s AS ten_minutes
 			FROM readings
-			GROUP BY ten_minutes
+			GROUP BY fleet, name, driver, ten_minutes
 			HAVING avg(velocity) > 1
 			), daily_total_session
 		AS (
-			SELECT %s AS day, count(*) / 6 AS hours
+			SELECT fleet, name, driver, %s AS day, count(*) / 6 AS hours
 			FROM ten_minute_driving_sessions
-			GROUP BY day
+			GROUP BY fleet, name, driver, day
 			)
 		SELECT fleet, name, driver, avg(hours) AS avg_daily_hours
 		FROM daily_total_session
@@ -232,20 +240,21 @@ func (i *IoT) AvgDailyDrivingSession(qi query.Query) {
 		AS (
 			SELECT name, %s AS ten_minutes, avg(velocity) > 5 AS driving
 			FROM readings
-			GROUP BY ten_minutes
+			GROUP BY name, ten_minutes
 			ORDER BY ten_minutes
 			), driver_status_change
 		AS (
 			SELECT name, ten_minutes AS start, lead(ten_minutes) OVER (ORDER BY ten_minutes) AS stop, driving
 			FROM (
-				SELECT ten_minutes, driving, lag(driving) OVER (ORDER BY ten_minutes) AS prev_driving
+				SELECT name, ten_minutes, driving, lag(driving) OVER (ORDER BY ten_minutes) AS prev_driving
 				FROM driver_status
 				) x
 			WHERE x.driving <> x.prev_driving
 			)
-		SELECT name, %s AS day, avg(age(stop, start)) AS duration
+		SELECT name, %s AS day, avg(date_part('nanosecond', stop) - date_part('nanosecond', start)) AS duration
 		FROM driver_status_change
 		WHERE driving = true
+		AND name IS NOT NULL
 		GROUP BY name, day
 		ORDER BY name, day`,
 		getNonTimeBucket("time", 10*time.Minute),
@@ -277,9 +286,9 @@ func (i *IoT) AvgLoad(qi query.Query) {
 func (i *IoT) DailyTruckActivity(qi query.Query) {
 	sql := fmt.Sprintf(`SELECT fleet, model, day, sum(ten_mins_per_day) / 144 AS daily_activity
 		FROM (
-			SELECT %s AS day, %s AS ten_minutes, count(*) AS ten_mins_per_day
+			SELECT fleet, model, %s AS day, %s AS ten_minutes, count(*) AS ten_mins_per_day
 			FROM diagnostics
-			GROUP BY day, ten_minutes
+			GROUP BY fleet, model, day, ten_minutes
 			HAVING avg(STATUS) < 1
 		)
 		GROUP BY fleet, model, day
@@ -297,12 +306,12 @@ func (i *IoT) DailyTruckActivity(qi query.Query) {
 func (i *IoT) TruckBreakdownFrequency(qi query.Query) {
 	sql := fmt.Sprintf(`WITH breakdown_per_truck_per_ten_minutes
 		AS (
-			SELECT %s AS ten_minutes, count(STATUS = 0) / count(*) >= 0.5 AS broken_down
+			SELECT model, %s AS ten_minutes, count(STATUS = 0) / count(*) >= 0.5 AS broken_down
 			FROM diagnostics
-			GROUP BY ten_minutes
+			GROUP BY model, ten_minutes
 			), breakdowns_per_truck
 		AS (
-			SELECT ten_minutes, broken_down, lead(broken_down) OVER (ORDER BY ten_minutes) AS next_broken_down
+			SELECT model, ten_minutes, broken_down, lead(broken_down) OVER (ORDER BY ten_minutes) AS next_broken_down
 			FROM breakdown_per_truck_per_ten_minutes
 			)
 		SELECT model, count(*)
