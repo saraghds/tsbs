@@ -249,7 +249,7 @@ func (sp *defaultStatProcessor) GetTotalsMap() map[string]interface{} {
 		metrics["sum"] = statGroup.sum
 		metrics["count"] = statGroup.count
 	}
-	totals["overallMetrics"] = quantiles
+	totals["overallMetrics"] = metrics
 	return totals
 }
 
