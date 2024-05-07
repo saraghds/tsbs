@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/HdrHistogram/hdrhistogram-go"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/HdrHistogram/hdrhistogram-go"
 )
 
 // statProcessor is used to collect, analyze, and print query execution statistics.
@@ -238,6 +239,17 @@ func (sp *defaultStatProcessor) GetTotalsMap() map[string]interface{} {
 		quantiles[stripRegex(label)] = all
 	}
 	totals["overallQuantiles"] = quantiles
+	// calculate other metrics
+	metrics := make(map[string]interface{})
+	for _, statGroup := range sp.statMapping {
+		metrics["min"] = statGroup.Min()
+		metrics["mean"] = statGroup.Mean()
+		metrics["max"] = statGroup.Max()
+		metrics["stddev"] = statGroup.StdDev()
+		metrics["sum"] = statGroup.sum
+		metrics["count"] = statGroup.count
+	}
+	totals["overallMetrics"] = quantiles
 	return totals
 }
 
