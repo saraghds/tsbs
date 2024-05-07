@@ -241,13 +241,16 @@ func (sp *defaultStatProcessor) GetTotalsMap() map[string]interface{} {
 	totals["overallQuantiles"] = quantiles
 	// calculate other metrics
 	metrics := make(map[string]interface{})
-	for _, statGroup := range sp.statMapping {
-		metrics["min"] = statGroup.Min()
-		metrics["mean"] = statGroup.Mean()
-		metrics["max"] = statGroup.Max()
-		metrics["stddev"] = statGroup.StdDev()
-		metrics["sum"] = statGroup.sum
-		metrics["count"] = statGroup.count
+	for label, statGroup := range sp.statMapping {
+		mp := map[string]float64{
+			"min":    statGroup.Min(),
+			"mean":   statGroup.Mean(),
+			"max":    statGroup.Max(),
+			"stddev": statGroup.StdDev(),
+			"sum":    statGroup.sum,
+			"count":  float64(statGroup.count),
+		}
+		metrics[stripRegex(label)] = mp
 	}
 	totals["overallMetrics"] = metrics
 	return totals
