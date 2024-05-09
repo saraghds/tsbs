@@ -1,13 +1,14 @@
 package influx
 
 import (
+	"time"
+
 	"github.com/blagojts/viper"
 	"github.com/spf13/pflag"
 	"github.com/timescale/tsbs/pkg/data/serialize"
 	"github.com/timescale/tsbs/pkg/data/source"
 	"github.com/timescale/tsbs/pkg/targets"
 	"github.com/timescale/tsbs/pkg/targets/constants"
-	"time"
 )
 
 func NewTarget() targets.ImplementedTarget {
@@ -23,6 +24,7 @@ func (t *influxTarget) TargetSpecificFlags(flagPrefix string, flagSet *pflag.Fla
 	flagSet.String(flagPrefix+"consistency", "all", "Write consistency. Must be one of: any, one, quorum, all.")
 	flagSet.Duration(flagPrefix+"backoff", time.Second, "Time to sleep between requests when server indicates backpressure is needed.")
 	flagSet.Bool(flagPrefix+"gzip", true, "Whether to gzip encode requests (default true).")
+	flagSet.String(flagPrefix+"token", "", "Token to access InfluxDB")
 }
 
 func (t *influxTarget) TargetName() string {
