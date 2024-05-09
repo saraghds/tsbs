@@ -69,10 +69,12 @@ func (w *HTTPWriter) initializeReq(req *fasthttp.Request, body []byte, isGzip bo
 	req.Header.SetContentTypeBytes(textPlain)
 	req.Header.SetMethodBytes(methodPost)
 	req.Header.SetRequestURIBytes(w.url)
+	fmt.Printf("w.url=%s", w.url)
 	req.Header.Add("Authorization", "Token "+token)
 
 	if isGzip {
 		req.Header.Add(headerContentEncoding, headerGzip)
+		fmt.Println("gzip")
 	}
 	req.SetBody(body)
 }
@@ -83,6 +85,7 @@ func (w *HTTPWriter) executeReq(req *fasthttp.Request, resp *fasthttp.Response) 
 	lat := time.Since(start).Nanoseconds()
 	if err == nil {
 		sc := resp.StatusCode()
+		fmt.Printf("StatusCode=%d", sc)
 		if sc == 500 && backpressurePred(resp.Body()) {
 			err = errBackoff
 		} else if sc != fasthttp.StatusNoContent {
