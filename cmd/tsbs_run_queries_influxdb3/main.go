@@ -83,18 +83,14 @@ func (p *processor) Init(workerNumber int) {
 		Token:    token,
 		Database: database,
 	})
-	fmt.Printf("influxdb3 host=%s\n", host)
-	fmt.Printf("influxdb3 port=%s\n", port)
-	fmt.Printf("influxdb3 database=%s\n", database)
-	fmt.Printf("influxdb3 token=%s\n", token)
 	databases.PanicIfErr(err)
 	p.client = client
 }
 
 func (p *processor) ProcessQuery(q query.Query, _ bool) ([]*query.Stat, error) {
-	tq := q.(*query.InfluxDB3)
+	// tq := q.(*query.InfluxDB3)
 	start := time.Now()
-	qry := string(tq.SqlQuery)
+	qry := "show tables"
 
 	iterator, err := p.client.Query(context.Background(), qry)
 	databases.PanicIfErr(err)
