@@ -88,9 +88,9 @@ func (p *processor) Init(workerNumber int) {
 }
 
 func (p *processor) ProcessQuery(q query.Query, _ bool) ([]*query.Stat, error) {
-	// tq := q.(*query.InfluxDB3)
+	tq := q.(*query.InfluxDB3)
 	start := time.Now()
-	qry := "show tables"
+	qry := string(tq.SqlQuery)
 
 	iterator, err := p.client.Query(context.Background(), qry)
 	databases.PanicIfErr(err)
