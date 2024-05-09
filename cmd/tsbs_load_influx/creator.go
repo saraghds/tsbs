@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -41,9 +40,6 @@ func (d *dbCreator) listDatabases() ([]string, error) {
 		return nil, fmt.Errorf("listDatabases error: %s", err.Error())
 	}
 
-	// add authorization header to the req
-	// read from env
-	token := os.Getenv("INFLUXDB_TOKEN")
 	req.Header.Set("Authorization", "Token "+token)
 
 	// Send req using http Client
@@ -97,8 +93,6 @@ func (d *dbCreator) RemoveOldDB(dbName string) error {
 		return fmt.Errorf("drop db error: %s", err.Error())
 	}
 
-	// add authorization header to the req
-	token := os.Getenv("INFLUXDB_TOKEN")
 	req.Header.Set("Authorization", "Token "+token)
 
 	// Send req using http Client
@@ -129,7 +123,6 @@ func (d *dbCreator) CreateDB(dbName string) error {
 	// u.RawQuery = v.Encode()
 
 	// req, err := http.NewRequest("GET", u.String(), nil)
-	// token := os.Getenv("INFLUXDB_TOKEN")
 	// req.Header.Set("Authorization", "Token "+token)
 	// if err != nil {
 	// 	return err

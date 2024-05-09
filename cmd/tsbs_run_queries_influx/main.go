@@ -20,6 +20,7 @@ import (
 var (
 	daemonUrls []string
 	chunkSize  uint64
+	token      string
 )
 
 // Global vars:
@@ -50,6 +51,7 @@ func init() {
 
 	csvDaemonUrls = viper.GetString("urls")
 	chunkSize = viper.GetUint64("chunk-response-size")
+	token = viper.GetString("token")
 
 	daemonUrls = strings.Split(csvDaemonUrls, ",")
 	if len(daemonUrls) == 0 {

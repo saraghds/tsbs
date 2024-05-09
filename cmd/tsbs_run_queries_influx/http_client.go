@@ -74,8 +74,6 @@ func (w *HTTPClient) Do(q *query.HTTP, opts *HTTPClientDoOptions) (lag float64, 
 	if err != nil {
 		panic(err)
 	}
-	// add token to the Authorization header
-	token := os.Getenv("INFLUXDB_TOKEN")
 	req.Header.Set("Authorization", "Token "+token)
 
 	// Perform the request while tracking latency:
