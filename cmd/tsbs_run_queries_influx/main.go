@@ -35,6 +35,7 @@ func init() {
 	var csvDaemonUrls string
 
 	pflag.String("urls", "http://localhost:8086", "Daemon URLs, comma-separated. Will be used in a round-robin fashion.")
+	pflag.String("token", "", "Token to access InfluxDB.")
 	pflag.Uint64("chunk-response-size", 0, "Number of series to chunk results into. 0 means no chunking.")
 
 	pflag.Parse()
