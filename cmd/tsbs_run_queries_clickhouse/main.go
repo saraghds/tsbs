@@ -84,9 +84,7 @@ func getConnectString(workerNumber int) string {
 	// Round robin the host/worker assignment by assigning a host based on workerNumber % totalNumberOfHosts
 	host := hostsList[workerNumber%len(hostsList)]
 
-	output := fmt.Sprintf("tcp://%s:9000?username=%s&password=%s&database=%s", host, user, password, runner.DatabaseName())
-	fmt.Printf("clickhouse host=%s\n", output)
-	return output
+	return fmt.Sprintf("tcp://%s:9000?username=%s&password=%s&database=%s", host, user, password, runner.DatabaseName())
 }
 
 // prettyPrintResponse prints a Query and its response in JSON format with two
