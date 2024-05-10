@@ -181,9 +181,7 @@ type processor struct {
 func newProcessor() query.Processor { return &processor{} }
 
 func (p *processor) Init(workerNumber int) {
-	connectionString := getConnectString(workerNumber)
-	fmt.Printf("connectionString=%s\n", connectionString)
-	db, err := sql.Open(driver, connectionString)
+	db, err := sql.Open(driver, getConnectString(workerNumber))
 	if err != nil {
 		panic(err)
 	}
