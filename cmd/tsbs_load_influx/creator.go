@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -110,36 +111,36 @@ func (d *dbCreator) RemoveOldDB(dbName string) error {
 }
 
 func (d *dbCreator) CreateDB(dbName string) error {
-	// u, err := url.Parse(d.daemonURL)
-	// if err != nil {
-	// 	return err
-	// }
+	u, err := url.Parse(d.daemonURL)
+	if err != nil {
+		return err
+	}
 
-	// // serialize params the right way:
-	// u.Path = "query"
-	// v := u.Query()
-	// v.Set("consistency", "all")
-	// v.Set("q", fmt.Sprintf("CREATE DATABASE %s WITH REPLICATION %d", dbName))
-	// u.RawQuery = v.Encode()
+	// serialize params the right way:
+	u.Path = "query"
+	v := u.Query()
+	v.Set("consistency", "all")
+	v.Set("q", fmt.Sprintf("CREATE DATABASE %s WITH REPLICATION %d", dbName, replicationFactor))
+	u.RawQuery = v.Encode()
 
-	// req, err := http.NewRequest("GET", u.String(), nil)
-	// req.Header.Set("Authorization", "Token "+token)
-	// if err != nil {
-	// 	return err
-	// }
+	req, err := http.NewRequest("GET", u.String(), nil)
+	req.Header.Set("Authorization", "Token "+token)
+	if err != nil {
+		return err
+	}
 
-	// client := &http.Client{}
-	// resp, err := client.Do(req)
-	// if err != nil {
-	// 	return err
-	// }
-	// defer resp.Body.Close()
-	// // does the body need to be read into the void?
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	// does the body need to be read into the void?
 
-	// if resp.StatusCode != 200 {
-	// 	return fmt.Errorf("bad db create")
-	// }
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("bad db create")
+	}
 
-	// time.Sleep(time.Second)
+	time.Sleep(time.Second)
 	return nil
 }
