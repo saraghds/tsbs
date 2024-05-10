@@ -25,6 +25,7 @@ func (t *influxTarget) TargetSpecificFlags(flagPrefix string, flagSet *pflag.Fla
 	flagSet.Duration(flagPrefix+"backoff", time.Second, "Time to sleep between requests when server indicates backpressure is needed.")
 	flagSet.Bool(flagPrefix+"gzip", true, "Whether to gzip encode requests (default true).")
 	flagSet.String(flagPrefix+"token", "", "Token to access InfluxDB")
+	flagSet.Bool(flagPrefix+"not-create-db", false, "Whether to create the database during test.")
 }
 
 func (t *influxTarget) TargetName() string {

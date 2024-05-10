@@ -31,6 +31,7 @@ var (
 	doAbortOnExist    bool
 	consistency       string
 	token             string
+	notCreateDB       bool
 )
 
 // Global vars
@@ -77,6 +78,7 @@ func init() {
 	backoff = viper.GetDuration("backoff")
 	useGzip = viper.GetBool("gzip")
 	token = viper.GetString("token")
+	notCreateDB = viper.GetBool("not-create-db")
 
 	if _, ok := consistencyChoices[consistency]; !ok {
 		log.Fatalf("invalid consistency settings")
@@ -109,6 +111,9 @@ func (b *benchmark) GetProcessor() targets.Processor {
 }
 
 func (b *benchmark) GetDBCreator() targets.DBCreator {
+	if notCreateDB {
+		return nil
+	}
 	return &dbCreator{}
 }
 
