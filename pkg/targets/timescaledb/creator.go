@@ -59,6 +59,7 @@ func MustConnect(dbType, connStr string) *sql.DB {
 
 func (d *dbCreator) DBExists(dbName string) bool {
 	db := MustConnect(d.driver, d.connStr)
+	fmt.Printf("d.connStr=%s\n", d.connStr)
 	defer db.Close()
 	r := MustQuery(db, "SELECT 1 from pg_database WHERE datname = $1", dbName)
 	defer r.Close()
