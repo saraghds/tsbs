@@ -61,6 +61,5 @@ func (o *LoadingOptions) GetConnectString(dbName string) string {
 		connectString = fmt.Sprintf("%s disable_prepared_binary_result=yes binary_parameters=no", connectString)
 	}
 
-	fmt.Printf("connectString=%s\n", connectString)
 	return connectString
 }
