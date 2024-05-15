@@ -1,6 +1,7 @@
 package influxdb3
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/uses/devops"
@@ -26,6 +27,8 @@ func (g *BaseGenerator) fillInQuery(qi query.Query, humanLabel, humanDesc, table
 	q.HumanLabel = []byte(humanLabel)
 	q.HumanDescription = []byte(humanDesc)
 	q.SqlQuery = []byte(sql)
+
+	fmt.Printf("query %s:\n%s\n\n", q.HumanLabelName(), q.SqlQuery)
 }
 
 // NewDevops creates a new devops use case query generator.
