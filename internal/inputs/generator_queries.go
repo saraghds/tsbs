@@ -7,7 +7,6 @@ import (
 	"io"
 	"math/rand"
 	"os"
-	"sort"
 	"time"
 
 	queryUtils "github.com/timescale/tsbs/cmd/tsbs_generate_queries/utils"
@@ -252,16 +251,16 @@ func (g *QueryGenerator) runQueryGeneration(useGen queryUtils.QueryGenerator, fi
 	}
 
 	// Print stats:
-	keys := []string{}
-	for k := range stats {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		_, err := fmt.Fprintf(g.DebugOut, "%s: %d points\n", k, stats[k])
-		if err != nil {
-			return fmt.Errorf(errCouldNotQueryStatsFmt, err)
-		}
-	}
+	// keys := []string{}
+	// for k := range stats {
+	// 	keys = append(keys, k)
+	// }
+	// sort.Strings(keys)
+	// for _, k := range keys {
+	// 	_, err := fmt.Fprintf(g.DebugOut, "%s: %d points\n", k, stats[k])
+	// 	if err != nil {
+	// 		return fmt.Errorf(errCouldNotQueryStatsFmt, err)
+	// 	}
+	// }
 	return nil
 }
