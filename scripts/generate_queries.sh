@@ -90,7 +90,19 @@ for QUERY_TYPE in ${QUERY_TYPES}; do
                 --timescale-use-tags=${USE_TAGS} \
                 --timescale-use-time-bucket=${USE_TIME_BUCKET} \
                 --clickhouse-use-tags=${USE_TAGS} \
-            
+            | gzip  > ${DATA_FILE_NAME}
+
+            trap - EXIT
+            # Make short symlink for convenience
+            SYMLINK_NAME="${FORMAT}-${QUERY_TYPE}-queries.gz"
+
+            rm -f ${SYMLINK_NAME} 2> /dev/null
+            ln -s ${DATA_FILE_NAME} ${SYMLINK_NAME}
+
+            # Make files accessible by everyone
+            chmod a+r ${DATA_FILE_NAME} ${SYMLINK_NAME}
+
+            ls -lh ${SYMLINK_NAME}
         fi
     done
 done

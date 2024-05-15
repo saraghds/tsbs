@@ -1,7 +1,6 @@
 package timescaledb
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/uses/devops"
@@ -31,13 +30,6 @@ func (g *BaseGenerator) fillInQuery(qi query.Query, humanLabel, humanDesc, table
 	q.HumanDescription = []byte(humanDesc)
 	q.Hypertable = []byte(table)
 	q.SqlQuery = []byte(sql)
-
-	fmt.Printf(`- name: %s
-    sources:
-      - sql: |
-          %s
-        backend: timescaledb
-	`, humanLabel, sql)
 }
 
 // NewDevops creates a new devops use case query generator.

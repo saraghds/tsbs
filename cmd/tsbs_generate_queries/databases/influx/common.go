@@ -31,12 +31,6 @@ func (g *BaseGenerator) fillInQuery(qi query.Query, humanLabel, humanDesc, influ
 	q.Method = []byte("POST")
 	q.Path = []byte(fmt.Sprintf("/query?%s", v.Encode()))
 	q.Body = nil
-
-	fmt.Printf(`- name: %s
-    sources:
-      - influxql: |
-          %s
-	`, humanLabel, influxql)
 }
 
 // NewDevops creates a new devops use case query generator.
