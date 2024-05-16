@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/InfluxCommunity/influxdb3-go/influxdb3"
-	"github.com/apache/arrow/go/v10/arrow/flight/flightsql"
+	"github.com/apache/arrow/go/v15/arrow/flight/flightsql"
 	"github.com/blagojts/viper"
 	"github.com/spf13/pflag"
 	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/databases"
