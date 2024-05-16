@@ -74,8 +74,8 @@ func init() {
 	secure = viper.GetBool("secure")
 	flightSQL = viper.GetBool("flightsql")
 
-	printResponse = runner.DoPrintResponses()
 	runner = query.NewBenchmarkRunner(config)
+	printResponse = runner.DoPrintResponses()
 }
 
 func main() {
