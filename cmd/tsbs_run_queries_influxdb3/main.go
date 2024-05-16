@@ -26,13 +26,14 @@ import (
 
 // Program option vars:
 var (
-	host      string
-	port      string
-	token     string
-	bucket    string
-	database  string
-	secure    bool
-	flightSQL bool
+	host          string
+	port          string
+	token         string
+	bucket        string
+	database      string
+	secure        bool
+	flightSQL     bool
+	printResponse bool
 )
 
 // Global vars:
@@ -73,6 +74,7 @@ func init() {
 	secure = viper.GetBool("secure")
 	flightSQL = viper.GetBool("flightsql")
 
+	printResponse = runner.DoPrintResponses()
 	runner = query.NewBenchmarkRunner(config)
 }
 
@@ -127,28 +129,45 @@ func (p *processor) ProcessQuery(q query.Query, _ bool) ([]*query.Stat, error) {
 		flightInfo, err := p.flightSqlClient.Execute(ctx, qry)
 		databases.PanicIfErr(err)
 
-		output := ""
-		for _, endpoint := range flightInfo.Endpoint {
-			flightReader, err := p.flightSqlClient.DoGet(ctx, endpoint.Ticket)
-			databases.PanicIfErr(err)
-			for flightReader.Next() {
-				record := flightReader.Record()
-				output += fmt.Sprintf("%v\n", record)
+		if printResponse {
+			output := ""
+			for _, endpoint := range flightInfo.Endpoint {
+				flightReader, err := p.flightSqlClient.DoGet(ctx, endpoint.Ticket)
+				databases.PanicIfErr(err)
+				for flightReader.Next() {
+					record := flightReader.Record()
+					output += fmt.Sprintf("%v\n", record)
+				}
+				flightReader.Release()
 			}
-			flightReader.Release()
-		}
 
-		fmt.Printf("%s\n\n%s\n-----\n\n", qry, output)
+			fmt.Printf("%s\n\n%s\n-----\n\n", qry, output)
+		} else {
+			for _, endpoint := range flightInfo.Endpoint {
+				flightReader, err := p.flightSqlClient.DoGet(ctx, endpoint.Ticket)
+				databases.PanicIfErr(err)
+				// Fetching all the rows to confirm that the query is fully completed.
+				for flightReader.Next() {
+				}
+				flightReader.Release()
+			}
+		}
 	} else {
 		iterator, err := p.client.Query(context.Background(), qry)
 		databases.PanicIfErr(err)
 
-		output := ""
-		for iterator.Next() {
-			value := iterator.Value()
-			output += fmt.Sprintf("%s\n", fmt.Sprint(value))
+		if printResponse {
+			output := ""
+			for iterator.Next() {
+				value := iterator.Value()
+				output += fmt.Sprintf("%s\n", fmt.Sprint(value))
+			}
+			fmt.Printf("%s\n\n%s\n-----\n\n", qry, output)
+		} else {
+			// Fetching all the rows to confirm that the query is fully completed.
+			for iterator.Next() {
+			}
 		}
-		fmt.Printf("%s\n\n%s\n-----\n\n", qry, output)
 	}
 
 	took := float64(time.Since(start).Nanoseconds()) / 1e6
