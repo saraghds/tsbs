@@ -118,7 +118,12 @@ func (p *processor) ProcessQuery(q query.Query, _ bool) ([]*query.Stat, error) {
 	if flightSQL {
 		ctx := context.Background()
 		ctx = metadata.AppendToOutgoingContext(ctx, "authorization", fmt.Sprintf("Token %s", token))
-		ctx = metadata.AppendToOutgoingContext(ctx, "database", database)
+		if bucket != "" {
+			ctx = metadata.AppendToOutgoingContext(ctx, "bucket-name", bucket)
+		}
+		if database != "" {
+			ctx = metadata.AppendToOutgoingContext(ctx, "database", database)
+		}
 		flightInfo, err := p.flightSqlClient.Execute(ctx, qry)
 		databases.PanicIfErr(err)
 
