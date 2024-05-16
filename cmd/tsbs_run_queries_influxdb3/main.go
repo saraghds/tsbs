@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/InfluxCommunity/influxdb3-go/influxdb3"
@@ -99,6 +100,9 @@ func (p *processor) Init(workerNumber int) {
 	})
 	databases.PanicIfErr(err)
 	p.client = client
+
+	hostPort = strings.Replace(hostPort, "http://", "", 1)
+	hostPort = strings.Replace(hostPort, "https://", "", 1)
 
 	var dialOpt grpc.DialOption
 	if secure {
