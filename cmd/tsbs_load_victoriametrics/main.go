@@ -41,7 +41,6 @@ func initProgramOptions() (*victoriametrics.SpecificConfig, load.BenchmarkRunner
 }
 
 func main() {
-	fmt.Println("load main")
 	vmConf, loader, loaderConf := initProgramOptions()
 
 	benchmark, err := victoriametrics.NewBenchmark(vmConf, &source.DataSourceConfig{
@@ -51,7 +50,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("load main 2")
 	loader.RunBenchmark(benchmark)
-	fmt.Println("load main 3")
 }

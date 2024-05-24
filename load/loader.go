@@ -182,7 +182,6 @@ func (l *CommonBenchmarkRunner) saveTestResult(took time.Duration, start time.Ti
 
 // RunBenchmark takes in a Benchmark b and uses it to run the load benchmark
 func (l *CommonBenchmarkRunner) RunBenchmark(b targets.Benchmark) {
-	fmt.Println("RunBenchmark")
 	wg, start := l.preRun(b)
 	var numChannels, capacity uint
 	if l.HashWorkers {
@@ -193,7 +192,6 @@ func (l *CommonBenchmarkRunner) RunBenchmark(b targets.Benchmark) {
 		capacity = l.Workers
 	}
 
-	fmt.Println("RunBenchmark 1")
 	channels := l.createChannels(numChannels, capacity)
 
 	// Launch all worker processes in background
@@ -201,20 +199,16 @@ func (l *CommonBenchmarkRunner) RunBenchmark(b targets.Benchmark) {
 		go l.work(b, wg, channels[i%numChannels], i)
 	}
 
-	fmt.Println("RunBenchmark 2")
 	// Start scan process - actual data read process
 	scanWithFlowControl(channels, l.BatchSize, l.Limit, b.GetDataSource(), b.GetBatchFactory(), b.GetPointIndexer(uint(len(channels))))
 	// After scan process completed (no more data to come) - begin shutdown process
-	fmt.Println("RunBenchmark 3")
 
 	// Close all communication channels to/from workers
 	for _, c := range channels {
 		c.close()
 	}
-	fmt.Println("RunBenchmark 4")
 
 	l.postRun(wg, start)
-	fmt.Println("RunBenchmark 5")
 }
 
 // useDBCreator handles a DBCreator by running it according to flags set by the
@@ -280,7 +274,7 @@ func (l *CommonBenchmarkRunner) createChannels(numChannels, capacity uint) []*du
 
 // work is the processing function for each worker in the loader
 func (l *CommonBenchmarkRunner) work(b targets.Benchmark, wg *sync.WaitGroup, c *duplexChannel, workerNum uint) {
-	fmt.Println("work")
+
 	// Prepare processor
 	proc := b.GetProcessor()
 	proc.Init(int(workerNum), l.DoLoad, l.HashWorkers)
@@ -288,17 +282,11 @@ func (l *CommonBenchmarkRunner) work(b targets.Benchmark, wg *sync.WaitGroup, c 
 	// Process batches coming from duplexChannel.toWorker queue
 	// and send ACKs into duplexChannel.toScanner queue
 	for batch := range c.toWorker {
-		fmt.Println("work 1")
 		startedWorkAt := time.Now()
-		fmt.Println("work 2")
 		metricCnt, rowCnt := proc.ProcessBatch(batch, l.DoLoad)
-		fmt.Println("work 3")
 		atomic.AddUint64(&l.metricCnt, metricCnt)
-		fmt.Println("work 4")
 		atomic.AddUint64(&l.rowCnt, rowCnt)
-		fmt.Println("work 5")
 		c.sendToScanner()
-		fmt.Println("work 6")
 		l.timeToSleep(workerNum, startedWorkAt)
 	}
 
@@ -308,7 +296,6 @@ func (l *CommonBenchmarkRunner) work(b targets.Benchmark, wg *sync.WaitGroup, c 
 		c.Close(l.DoLoad)
 	}
 
-	fmt.Println("work 7")
 	wg.Done()
 }
 

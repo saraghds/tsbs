@@ -2,7 +2,6 @@ package victoriametrics
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -20,7 +19,6 @@ func (p *processor) Init(workerNum int, doLoad, hashWorkers bool) {
 }
 
 func (p *processor) ProcessBatch(b targets.Batch, doLoad bool) (metricCount, rowCount uint64) {
-	fmt.Println("ProcessBatch")
 	batch := b.(*batch)
 	if !doLoad {
 		return batch.metrics, batch.rows
