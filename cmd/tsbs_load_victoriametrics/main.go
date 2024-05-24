@@ -3,14 +3,15 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"strings"
+
 	"github.com/blagojts/viper"
 	"github.com/spf13/pflag"
 	"github.com/timescale/tsbs/internal/utils"
 	"github.com/timescale/tsbs/load"
 	"github.com/timescale/tsbs/pkg/data/source"
 	"github.com/timescale/tsbs/pkg/targets/victoriametrics"
-	"log"
-	"strings"
 )
 
 // Parse args:
@@ -40,6 +41,7 @@ func initProgramOptions() (*victoriametrics.SpecificConfig, load.BenchmarkRunner
 }
 
 func main() {
+	fmt.Println("load main")
 	vmConf, loader, loaderConf := initProgramOptions()
 
 	benchmark, err := victoriametrics.NewBenchmark(vmConf, &source.DataSourceConfig{
@@ -49,5 +51,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("load main 2")
 	loader.RunBenchmark(benchmark)
+	fmt.Println("load main 3")
 }
