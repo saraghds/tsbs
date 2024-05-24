@@ -274,7 +274,7 @@ func (l *CommonBenchmarkRunner) createChannels(numChannels, capacity uint) []*du
 
 // work is the processing function for each worker in the loader
 func (l *CommonBenchmarkRunner) work(b targets.Benchmark, wg *sync.WaitGroup, c *duplexChannel, workerNum uint) {
-
+	fmt.Println("work")
 	// Prepare processor
 	proc := b.GetProcessor()
 	proc.Init(int(workerNum), l.DoLoad, l.HashWorkers)
@@ -282,11 +282,17 @@ func (l *CommonBenchmarkRunner) work(b targets.Benchmark, wg *sync.WaitGroup, c 
 	// Process batches coming from duplexChannel.toWorker queue
 	// and send ACKs into duplexChannel.toScanner queue
 	for batch := range c.toWorker {
+		fmt.Println("work 1")
 		startedWorkAt := time.Now()
+		fmt.Println("work 2")
 		metricCnt, rowCnt := proc.ProcessBatch(batch, l.DoLoad)
+		fmt.Println("work 3")
 		atomic.AddUint64(&l.metricCnt, metricCnt)
+		fmt.Println("work 4")
 		atomic.AddUint64(&l.rowCnt, rowCnt)
+		fmt.Println("work 5")
 		c.sendToScanner()
+		fmt.Println("work 6")
 		l.timeToSleep(workerNum, startedWorkAt)
 	}
 
@@ -296,6 +302,7 @@ func (l *CommonBenchmarkRunner) work(b targets.Benchmark, wg *sync.WaitGroup, c 
 		c.Close(l.DoLoad)
 	}
 
+	fmt.Println("work 7")
 	wg.Done()
 }
 

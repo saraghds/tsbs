@@ -2,10 +2,12 @@ package victoriametrics
 
 import (
 	"bytes"
-	"github.com/timescale/tsbs/pkg/targets"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/timescale/tsbs/pkg/targets"
 )
 
 type processor struct {
@@ -18,6 +20,7 @@ func (p *processor) Init(workerNum int, doLoad, hashWorkers bool) {
 }
 
 func (p *processor) ProcessBatch(b targets.Batch, doLoad bool) (metricCount, rowCount uint64) {
+	fmt.Println("ProcessBatch")
 	batch := b.(*batch)
 	if !doLoad {
 		return batch.metrics, batch.rows
