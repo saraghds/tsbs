@@ -2,7 +2,6 @@ package clickhouse
 
 import (
 	"bufio"
-	"fmt"
 	"strings"
 
 	"github.com/timescale/tsbs/pkg/data"
@@ -159,8 +158,5 @@ func extractTagNamesAndTypes(tags []string) ([]string, []string) {
 		tagTypes[i] = tagAndType[1]
 	}
 
-	fmt.Printf("tags=%v\n", tags)
-	fmt.Printf("tagNames=%v\n", tagNames)
-	fmt.Printf("tagTypes=%v\n", tagTypes)
 	return tagNames, tagTypes
 }
