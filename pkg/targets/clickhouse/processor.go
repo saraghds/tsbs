@@ -2,12 +2,13 @@ package clickhouse
 
 import (
 	"fmt"
-	"github.com/jmoiron/sqlx"
-	"github.com/timescale/tsbs/pkg/targets"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jmoiron/sqlx"
+	"github.com/timescale/tsbs/pkg/targets"
 )
 
 // load.Processor interface implementation
@@ -267,6 +268,7 @@ func (p *processor) processCSI(tableName string, rows []*insertData) uint64 {
 
 // insertTags fills tags table with values
 func insertTags(conf *ClickhouseConfig, db *sqlx.DB, startID int, rows [][]string, returnResults bool) map[string]int64 {
+	fmt.Printf("tagColumnTypes=%v\n", tagColumnTypes)
 	// Map hostname to tags_id
 	ret := make(map[string]int64)
 
@@ -325,10 +327,14 @@ func insertTags(conf *ClickhouseConfig, db *sqlx.DB, startID int, rows [][]strin
 		// https://blog.learngoprogramming.com/golang-variadic-funcs-how-to-patterns-369408f19085
 		// Passing a slice to variadic param with an empty-interface
 		var variadicArgs []interface{} = make([]interface{}, len(row)+1) // +1 here for additional 'id' column value
+		fmt.Printf("len(row)+1=%d\n", len(row)+1)
 		// Place id at the beginning
 		variadicArgs[0] = id
 		// And all the rest of column values afterwards
 		for i, value := range row {
+			fmt.Printf("i=%d\n", i)
+			fmt.Printf("value=%s\n", value)
+			fmt.Printf("tagColumnTypes[i]=%s\n", tagColumnTypes[i])
 			variadicArgs[i+1] = convertBasedOnType(tagColumnTypes[i], value)
 		}
 
