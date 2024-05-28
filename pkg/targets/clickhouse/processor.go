@@ -318,6 +318,9 @@ func insertTags(conf *ClickhouseConfig, db *sqlx.DB, startID int, rows [][]strin
 
 	id := startID
 	for _, row := range rows {
+		if len(tagColumnTypes) != len(row) {
+			continue
+		}
 		// id of the new tag
 		id++
 
@@ -330,9 +333,7 @@ func insertTags(conf *ClickhouseConfig, db *sqlx.DB, startID int, rows [][]strin
 		variadicArgs[0] = id
 		// And all the rest of column values afterwards
 		for i, value := range row {
-			if len(tagColumnTypes) > i {
-				variadicArgs[i+1] = convertBasedOnType(tagColumnTypes[i], value)
-			}
+			variadicArgs[i+1] = convertBasedOnType(tagColumnTypes[i], value)
 		}
 
 		// And now expand []interface{} with the same data as 'row' contains (plus 'id') in Exec(args ...interface{})
