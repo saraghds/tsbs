@@ -58,11 +58,13 @@ func (p *processor) ProcessBatch(b targets.Batch, doLoad bool) (uint64, uint64) 
 			if useGzip {
 				compressedBatch := bufPool.Get().(*bytes.Buffer)
 				fasthttp.WriteGzip(compressedBatch, batch.buf.Bytes())
+				fmt.Printf("compressedBatch.String()=%s\n", compressedBatch.String())
 				err = writeAPI.WriteRecord(ctx, compressedBatch.String())
 				// Return the compressed batch buffer to the pool.
 				compressedBatch.Reset()
 				bufPool.Put(compressedBatch)
 			} else {
+				fmt.Printf("batch.buf.String()=%s\n", batch.buf.String())
 				err = writeAPI.WriteRecord(ctx, batch.buf.String())
 			}
 
