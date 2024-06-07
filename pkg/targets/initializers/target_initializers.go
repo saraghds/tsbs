@@ -2,6 +2,8 @@ package initializers
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/timescale/tsbs/pkg/targets"
 	"github.com/timescale/tsbs/pkg/targets/akumuli"
 	"github.com/timescale/tsbs/pkg/targets/cassandra"
@@ -16,7 +18,6 @@ import (
 	"github.com/timescale/tsbs/pkg/targets/timescaledb"
 	"github.com/timescale/tsbs/pkg/targets/timestream"
 	"github.com/timescale/tsbs/pkg/targets/victoriametrics"
-	"strings"
 )
 
 func GetTarget(format string) targets.ImplementedTarget {
@@ -31,7 +32,7 @@ func GetTarget(format string) targets.ImplementedTarget {
 		return clickhouse.NewTarget()
 	case constants.FormatCrateDB:
 		return crate.NewTarget()
-	case constants.FormatInflux:
+	case constants.FormatInflux, constants.FormatInfluxDB3:
 		return influx.NewTarget()
 	case constants.FormatMongo:
 		return mongo.NewTarget()
