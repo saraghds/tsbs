@@ -48,7 +48,7 @@ func (p *processor) Close(_ bool) {
 
 func (p *processor) ProcessBatch(b targets.Batch, doLoad bool) (uint64, uint64) {
 	batch := b.(*batch)
-	writeAPI := p.client.WriteAPIBlocking("", "")
+	writeAPI := p.client.WriteAPIBlocking(org, loader.DatabaseName())
 	ctx := context.Background()
 
 	// Write the batch: try until backoff is not needed.
