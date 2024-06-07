@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
 	"github.com/timescale/tsbs/pkg/targets"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-	"github.com/valyala/fasthttp"
 )
 
 const backingOffChanCap = 100
@@ -55,18 +53,16 @@ func (p *processor) ProcessBatch(b targets.Batch, doLoad bool) (uint64, uint64) 
 	if doLoad {
 		var err error
 		for {
-			if useGzip {
-				compressedBatch := bufPool.Get().(*bytes.Buffer)
-				fasthttp.WriteGzip(compressedBatch, batch.buf.Bytes())
-				fmt.Printf("compressedBatch.String()=%s\n", compressedBatch.String())
-				err = writeAPI.WriteRecord(ctx, compressedBatch.String())
-				// Return the compressed batch buffer to the pool.
-				compressedBatch.Reset()
-				bufPool.Put(compressedBatch)
-			} else {
-				fmt.Printf("batch.buf.String()=%s\n", batch.buf.String())
-				err = writeAPI.WriteRecord(ctx, batch.buf.String())
-			}
+			// if useGzip {
+			// 	compressedBatch := bufPool.Get().(*bytes.Buffer)
+			// 	fasthttp.WriteGzip(compressedBatch, batch.buf.Bytes())
+			// 	err = writeAPI.WriteRecord(ctx, compressedBatch.String())
+			// 	// Return the compressed batch buffer to the pool.
+			// 	compressedBatch.Reset()
+			// 	bufPool.Put(compressedBatch)
+			// } else {
+			err = writeAPI.WriteRecord(ctx, batch.buf.String())
+			// }
 
 			// if err == errBackoff {
 			// 	p.backingOffChan <- true
