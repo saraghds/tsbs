@@ -83,6 +83,7 @@ func (w *HTTPWriter) executeReq(req *fasthttp.Request, resp *fasthttp.Response) 
 	lat := time.Since(start).Nanoseconds()
 	if err == nil {
 		sc := resp.StatusCode()
+		fmt.Printf("sc=%d lat=%d\n", sc, lat)
 		if sc == 500 && backpressurePred(resp.Body()) {
 			err = errBackoff
 		} else if sc != fasthttp.StatusNoContent {
