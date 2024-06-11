@@ -101,6 +101,7 @@ func (w *HTTPWriter) executeReq(req *fasthttp.Request, resp *fasthttp.Response) 
 			break
 		}
 		retry++
+		time.Sleep(5 * time.Millisecond)
 	}
 	return lat, err
 }
