@@ -109,7 +109,7 @@ func (w *HTTPWriter) executeReq(req *fasthttp.Request, resp *fasthttp.Response) 
 		}
 
 		retryDelay := computeRetryDelay(retry)
-		fmt.Printf("retry delay: %dms", retryDelay)
+		fmt.Printf("retry delay: %dms\n", retryDelay)
 		time.Sleep(time.Duration(retryDelay) * time.Millisecond)
 		retry++
 	}
