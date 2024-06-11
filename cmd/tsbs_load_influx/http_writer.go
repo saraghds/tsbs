@@ -97,11 +97,11 @@ func (w *HTTPWriter) executeReq(req *fasthttp.Request, resp *fasthttp.Response) 
 		if err == nil || err == errBackoff {
 			break
 		}
-		if retry >= 5 {
+		if retry >= 10 {
 			break
 		}
 		retry++
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
 	return lat, err
 }
