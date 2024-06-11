@@ -5,6 +5,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"math"
+	"math/rand"
 	"net/url"
 	"time"
 
@@ -15,6 +17,11 @@ const (
 	httpClientName        = "tsbs_load_influx"
 	headerContentEncoding = "Content-Encoding"
 	headerGzip            = "gzip"
+
+	maxRetries       = 10
+	retryInterval    = 5
+	maxRetryInterval = 125
+	exponentialBase  = 2
 )
 
 var (
@@ -97,11 +104,14 @@ func (w *HTTPWriter) executeReq(req *fasthttp.Request, resp *fasthttp.Response) 
 		if err == nil || err == errBackoff {
 			break
 		}
-		if retry >= 10 {
+		if retry >= maxRetries {
 			break
 		}
+
+		retryDelay := computeRetryDelay(retry)
+		fmt.Printf("retry delay: %dms", retryDelay)
+		time.Sleep(time.Duration(retryDelay) * time.Millisecond)
 		retry++
-		time.Sleep(5 * time.Millisecond)
 	}
 	return lat, err
 }
@@ -136,4 +146,18 @@ func backpressurePred(body []byte) bool {
 	} else {
 		return false
 	}
+}
+
+func computeRetryDelay(attempts int) int {
+	minDelay := int(retryInterval * math.Pow(exponentialBase, float64(attempts)))
+	maxDelay := int(retryInterval * math.Pow(exponentialBase, float64(attempts+1)))
+	diff := maxDelay - minDelay
+	if diff <= 0 { //check overflows
+		return maxRetryInterval
+	}
+	retryDelay := rand.Intn(diff) + minDelay
+	if retryDelay > maxRetryInterval {
+		retryDelay = maxRetryInterval
+	}
+	return retryDelay
 }
