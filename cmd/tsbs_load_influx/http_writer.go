@@ -78,17 +78,29 @@ func (w *HTTPWriter) initializeReq(req *fasthttp.Request, body []byte, isGzip bo
 }
 
 func (w *HTTPWriter) executeReq(req *fasthttp.Request, resp *fasthttp.Response) (int64, error) {
-	start := time.Now()
-	err := w.client.Do(req, resp)
-	lat := time.Since(start).Nanoseconds()
-	if err == nil {
-		sc := resp.StatusCode()
-		fmt.Printf("sc=%d lat=%d\n", sc, lat)
-		if sc == 500 && backpressurePred(resp.Body()) {
-			err = errBackoff
-		} else if sc != fasthttp.StatusNoContent {
-			err = fmt.Errorf("[DebugInfo: %s] Invalid write response (status %d): %s", w.c.DebugInfo, sc, resp.Body())
+	retry := 1
+	var lat int64
+	var err error
+	for {
+		start := time.Now()
+		err = w.client.Do(req, resp)
+		lat = time.Since(start).Nanoseconds()
+		if err == nil {
+			sc := resp.StatusCode()
+			fmt.Printf("retry=%d sc=%d lat=%d\n", retry, sc, lat)
+			if sc == 500 && backpressurePred(resp.Body()) {
+				err = errBackoff
+			} else if sc != fasthttp.StatusNoContent {
+				err = fmt.Errorf("[DebugInfo: %s] Invalid write response (status %d): %s", w.c.DebugInfo, sc, resp.Body())
+			}
 		}
+		if err == nil || err == errBackoff {
+			break
+		}
+		if retry >= 5 {
+			break
+		}
+		retry++
 	}
 	return lat, err
 }
