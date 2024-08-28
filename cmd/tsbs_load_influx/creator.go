@@ -86,6 +86,10 @@ func (d *dbCreator) listDatabases() ([]string, error) {
 }
 
 func (d *dbCreator) RemoveOldDB(dbName string) error {
+	if notDropDB {
+		return nil
+	}
+
 	u := fmt.Sprintf("%s/query?q=drop+database+%s", d.daemonURL, dbName)
 
 	// Create a new request using http

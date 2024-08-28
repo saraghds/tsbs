@@ -32,6 +32,7 @@ var (
 	consistency       string
 	token             string
 	notCreateDB       bool
+	notDropDB         bool
 )
 
 // Global vars
@@ -79,6 +80,7 @@ func init() {
 	useGzip = viper.GetBool("gzip")
 	token = viper.GetString("token")
 	notCreateDB = viper.GetBool("not-create-db")
+	notDropDB = viper.GetBool("not-drop-db")
 
 	if _, ok := consistencyChoices[consistency]; !ok {
 		log.Fatalf("invalid consistency settings")

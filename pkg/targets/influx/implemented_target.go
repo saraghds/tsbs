@@ -26,6 +26,7 @@ func (t *influxTarget) TargetSpecificFlags(flagPrefix string, flagSet *pflag.Fla
 	flagSet.Bool(flagPrefix+"gzip", true, "Whether to gzip encode requests (default true).")
 	flagSet.String(flagPrefix+"token", "", "Token to access InfluxDB")
 	flagSet.Bool(flagPrefix+"not-create-db", false, "Whether to create the database during test.")
+	flagSet.Bool(flagPrefix+"not-drop-db", false, "Whether to drop the database during test.")
 	flagSet.String(flagPrefix+"org", "", "InfluxDB org name")
 }
 
