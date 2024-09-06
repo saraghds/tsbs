@@ -19,6 +19,10 @@ func (d *dbCreator) Init() {
 }
 
 func (d *dbCreator) DBExists(dbName string) bool {
+	if notDropDB {
+		return false
+	}
+
 	dbs, err := d.listDatabases()
 	if err != nil {
 		log.Fatal(err)
