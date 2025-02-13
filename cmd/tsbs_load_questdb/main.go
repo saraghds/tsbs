@@ -58,6 +58,7 @@ func init() {
 	pflag.CommandLine.Bool("tls", false, "Whether to use TLS encryption for database connection. The certificate check is disabled, so the client will trust any server")
 	pflag.CommandLine.String("auth-id", "", "ILP authentication token id")
 	pflag.CommandLine.String("auth-token", "", "ILP authentication token")
+	pflag.CommandLine.String("results-file", "", "Write the test results summary json to this file")
 	target.TargetSpecificFlags("", pflag.CommandLine)
 	pflag.Parse()
 
@@ -77,6 +78,7 @@ func init() {
 	authToken = viper.GetString("auth-token")
 	config.HashWorkers = false
 	config.NoFlowControl = true
+	config.ResultsFile = viper.GetString("results-file")
 	loader = load.GetBenchmarkRunner(config)
 }
 
