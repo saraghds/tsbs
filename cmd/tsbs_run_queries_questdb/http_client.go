@@ -1,9 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -13,11 +14,8 @@ import (
 	"github.com/timescale/tsbs/pkg/query"
 )
 
-var bytesSlash = []byte("/") // heap optimization
-
 // HTTPClient is a reusable HTTP Client.
 type HTTPClient struct {
-	//client     fasthttp.Client
 	client     *http.Client
 	Host       []byte
 	HostString string
@@ -26,10 +24,10 @@ type HTTPClient struct {
 
 // HTTPClientDoOptions wraps options uses when calling `Do`.
 type HTTPClientDoOptions struct {
+	Username             string
+	Password             string
 	Debug                int
 	PrettyPrintResponses bool
-	chunkSize            uint64
-	database             string
 }
 
 var httpClientOnce = sync.Once{}
@@ -38,7 +36,8 @@ var httpClient *http.Client
 func getHttpClient() *http.Client {
 	httpClientOnce.Do(func() {
 		tr := &http.Transport{
-			MaxIdleConnsPerHost: 1024,
+			MaxIdleConnsPerHost: 64,
+			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
 		}
 		httpClient = &http.Client{Transport: tr}
 	})
@@ -47,19 +46,16 @@ func getHttpClient() *http.Client {
 
 // NewHTTPClient creates a new HTTPClient.
 func NewHTTPClient(host string) *HTTPClient {
-	if strings.HasSuffix(host, "/") {
-		host = host[:len(host)-1]
-	}
+	host = strings.TrimSuffix(host, "/")
 	return &HTTPClient{
 		client:     getHttpClient(),
 		Host:       []byte(host),
 		HostString: host,
-		uri:        []byte{}, // heap optimization
+		uri:        []byte{},
 	}
 }
 
-// Do performs the action specified by the given Query. It uses fasthttp, and
-// tries to minimize heap allocations.
+// Do performs the action specified by the given Query.
 func (w *HTTPClient) Do(q *query.HTTP, opts *HTTPClientDoOptions) (lag float64, err error) {
 	// populate uri from the reusable byte slice:
 	w.uri = w.uri[:0]
@@ -70,6 +66,10 @@ func (w *HTTPClient) Do(q *query.HTTP, opts *HTTPClientDoOptions) (lag float64, 
 	req, err := http.NewRequest(string(q.Method), string(w.uri), nil)
 	if err != nil {
 		panic(err)
+	}
+
+	if opts.Username != "" {
+		req.SetBasicAuth(opts.Username, opts.Password)
 	}
 
 	// Perform the request while tracking latency:
@@ -83,16 +83,24 @@ func (w *HTTPClient) Do(q *query.HTTP, opts *HTTPClientDoOptions) (lag float64, 
 		panic("http request did not return status 200 OK")
 	}
 
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
+	if opts == nil || (opts.Debug == 0 && !opts.PrettyPrintResponses) {
+		// Read the body, but don't copy it anywhere.
+		_, err := io.Copy(io.Discard, resp.Body)
+		if err != nil {
+			panic(err)
+		}
 
-	if err != nil {
-		panic(err)
-	}
+		lag = float64(time.Since(start).Nanoseconds()) / 1e6 // milliseconds
+	} else {
+		// Copy the body to a buffer since we may need to print it.
+		var body []byte
+		body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
 
-	lag = float64(time.Since(start).Nanoseconds()) / 1e6 // milliseconds
+		lag = float64(time.Since(start).Nanoseconds()) / 1e6 // milliseconds
 
-	if opts != nil {
 		// Print debug messages, if applicable:
 		switch opts.Debug {
 		case 1:
@@ -111,21 +119,14 @@ func (w *HTTPClient) Do(q *query.HTTP, opts *HTTPClientDoOptions) (lag float64, 
 
 		// Pretty print JSON responses, if applicable:
 		if opts.PrettyPrintResponses {
-			// Assumes the response is JSON! This holds for Influx
-			// and Elastic.
+			// Assumes the response is JSON!
 
-			prefix := fmt.Sprintf("ID %d: ", q.GetID())
 			var v interface{}
-			var line []byte
-			full := make(map[string]interface{})
-			full["influxql"] = string(q.RawQuery)
-			json.Unmarshal(body, &v)
-			full["response"] = v
-			line, err = json.MarshalIndent(full, prefix, "  ")
+			err = json.Unmarshal(body, &v)
 			if err != nil {
 				return
 			}
-			fmt.Println(string(line) + "\n")
+			fmt.Printf("%v\n", v)
 		}
 	}
 
