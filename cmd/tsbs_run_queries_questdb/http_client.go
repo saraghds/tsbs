@@ -80,7 +80,7 @@ func (w *HTTPClient) Do(q *query.HTTP, opts *HTTPClientDoOptions) (lag float64, 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		panic("http request did not return status 200 OK")
+		panic(fmt.Sprintf("http request did not return status 200 OK, returned %d", resp.StatusCode))
 	}
 
 	if opts == nil || (opts.Debug == 0 && !opts.PrettyPrintResponses) {
