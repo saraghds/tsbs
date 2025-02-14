@@ -28,6 +28,7 @@ func (t *influxTarget) TargetSpecificFlags(flagPrefix string, flagSet *pflag.Fla
 	flagSet.Bool(flagPrefix+"not-create-db", false, "Whether to create the database during test.")
 	flagSet.Bool(flagPrefix+"not-drop-db", false, "Whether to drop the database during test.")
 	flagSet.String(flagPrefix+"org", "", "InfluxDB org name")
+	flagSet.String(flagPrefix+"bearer", "", "Bearer token to access InfluxDB")
 }
 
 func (t *influxTarget) TargetName() string {

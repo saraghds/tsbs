@@ -33,6 +33,7 @@ var (
 	token             string
 	notCreateDB       bool
 	org               string
+	bearer            string
 )
 
 // Global vars
@@ -81,6 +82,7 @@ func init() {
 	token = viper.GetString("token")
 	notCreateDB = viper.GetBool("not-create-db")
 	org = viper.GetString("org")
+	bearer = viper.GetString("bearer")
 
 	if _, ok := consistencyChoices[consistency]; !ok {
 		log.Fatalf("invalid consistency settings")

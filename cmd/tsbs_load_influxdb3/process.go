@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/timescale/tsbs/pkg/targets"
 
@@ -28,7 +29,17 @@ func (p *processor) Init(numWorker int, _, _ bool) {
 	// 	Database:  loader.DatabaseName(),
 	// }
 	// w := NewHTTPWriter(cfg, consistency)
-	c := influxdb2.NewClientWithOptions(daemonURL, token, influxdb2.DefaultOptions())
+	var c influxdb2.Client
+	if bearer != "" {
+		httpClient := &http.Client{
+			Transport: &CustomTransport{
+				Headers: map[string]string{"Authorization": fmt.Sprintf("Bearer %s", bearer)},
+			},
+		}
+		c = influxdb2.NewClientWithOptions(daemonURL, bearer, influxdb2.DefaultOptions().SetHTTPClient(httpClient))
+	} else {
+		c = influxdb2.NewClientWithOptions(daemonURL, token, influxdb2.DefaultOptions())
+	}
 	p.initWithClient(numWorker, c)
 }
 

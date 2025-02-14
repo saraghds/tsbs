@@ -35,6 +35,7 @@ var (
 	secure        bool
 	flightSQL     bool
 	printResponse bool
+	bearer        string
 )
 
 // Global vars:
@@ -54,6 +55,7 @@ func init() {
 	pflag.String("database", "", "Database name for dedicated")
 	pflag.Bool("secure", false, "Secure transport credentials")
 	pflag.Bool("flightsql", false, "Using FlightSQL")
+	pflag.String("bearer", "bearer", "Bearer token")
 
 	pflag.Parse()
 
@@ -74,6 +76,7 @@ func init() {
 	database = viper.GetString("database")
 	secure = viper.GetBool("secure")
 	flightSQL = viper.GetBool("flightsql")
+	bearer = viper.GetString("bearer")
 
 	runner = query.NewBenchmarkRunner(config)
 	printResponse = runner.DoPrintResponses()
@@ -93,11 +96,15 @@ func newProcessor() query.Processor { return &processor{} }
 func (p *processor) Init(workerNumber int) {
 	hostPort := fmt.Sprintf("%s:%s", host, port)
 
-	client, err := influxdb3.New(influxdb3.ClientConfig{
+	cfg := influxdb3.ClientConfig{
 		Host:     hostPort,
 		Token:    token,
 		Database: database,
-	})
+	}
+	if bearer != "" {
+		cfg.Token = bearer
+	}
+	client, err := influxdb3.New(cfg)
 	databases.PanicIfErr(err)
 	p.client = client
 
@@ -123,7 +130,11 @@ func (p *processor) ProcessQuery(q query.Query, _ bool) ([]*query.Stat, error) {
 
 	if flightSQL {
 		ctx := context.Background()
-		ctx = metadata.AppendToOutgoingContext(ctx, "authorization", fmt.Sprintf("Token %s", token))
+		if bearer != "" {
+			ctx = metadata.AppendToOutgoingContext(ctx, "authorization", fmt.Sprintf("Bearer %s", bearer))
+		} else {
+			ctx = metadata.AppendToOutgoingContext(ctx, "authorization", fmt.Sprintf("Token %s", token))
+		}
 		if bucket != "" {
 			ctx = metadata.AppendToOutgoingContext(ctx, "bucket-name", bucket)
 		}
