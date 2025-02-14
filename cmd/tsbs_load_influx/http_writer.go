@@ -76,7 +76,11 @@ func (w *HTTPWriter) initializeReq(req *fasthttp.Request, body []byte, isGzip bo
 	req.Header.SetContentTypeBytes(textPlain)
 	req.Header.SetMethodBytes(methodPost)
 	req.Header.SetRequestURIBytes(w.url)
-	req.Header.Add("Authorization", "Token "+token)
+	if bearer != "" {
+		req.Header.Add("Authorization", "Bearer "+bearer)
+	} else {
+		req.Header.Add("Authorization", "Token "+token)
+	}
 
 	if isGzip {
 		req.Header.Add(headerContentEncoding, headerGzip)

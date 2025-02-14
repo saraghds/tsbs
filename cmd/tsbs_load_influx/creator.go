@@ -45,7 +45,11 @@ func (d *dbCreator) listDatabases() ([]string, error) {
 		return nil, fmt.Errorf("listDatabases error: %s", err.Error())
 	}
 
-	req.Header.Set("Authorization", "Token "+token)
+	if bearer != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", bearer))
+	} else {
+		req.Header.Set("Authorization", "Token "+token)
+	}
 
 	// Send req using http Client
 	client := &http.Client{}
@@ -102,7 +106,11 @@ func (d *dbCreator) RemoveOldDB(dbName string) error {
 		return fmt.Errorf("drop db error: %s", err.Error())
 	}
 
-	req.Header.Set("Authorization", "Token "+token)
+	if bearer != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", bearer))
+	} else {
+		req.Header.Set("Authorization", "Token "+token)
+	}
 
 	// Send req using http Client
 	client := &http.Client{}
@@ -132,9 +140,14 @@ func (d *dbCreator) CreateDB(dbName string) error {
 	u.RawQuery = v.Encode()
 
 	req, err := http.NewRequest("GET", u.String(), nil)
-	req.Header.Set("Authorization", "Token "+token)
 	if err != nil {
 		return err
+	}
+
+	if bearer != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", bearer))
+	} else {
+		req.Header.Set("Authorization", "Token "+token)
 	}
 
 	client := &http.Client{}
