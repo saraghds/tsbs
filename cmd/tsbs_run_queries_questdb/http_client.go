@@ -80,7 +80,13 @@ func (w *HTTPClient) Do(q *query.HTTP, opts *HTTPClientDoOptions) (lag float64, 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		println("response body: %s", resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			println("Error reading body:", err)
+		}
+
+		bodyString := string(bodyBytes)
+		println("response body: %s", bodyString)
 		panic(fmt.Sprintf("http request did not return status 200 OK, returned %d", resp.StatusCode))
 	}
 
