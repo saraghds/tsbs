@@ -29,6 +29,7 @@ func (t *influxTarget) TargetSpecificFlags(flagPrefix string, flagSet *pflag.Fla
 	flagSet.Bool(flagPrefix+"not-drop-db", false, "Whether to drop the database during test.")
 	flagSet.String(flagPrefix+"org", "", "InfluxDB org name")
 	flagSet.String(flagPrefix+"bearer", "", "Bearer token to access InfluxDB")
+	flagSet.Bool(flagPrefix+"no-sync", false, "Whether to disable sync writes (only in InfluxDB 3.x Core and Enterprise)")
 }
 
 func (t *influxTarget) TargetName() string {
