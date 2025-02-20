@@ -57,13 +57,17 @@ type HTTPWriter struct {
 
 // NewHTTPWriter returns a new HTTPWriter from the supplied HTTPWriterConfig.
 func NewHTTPWriter(c HTTPWriterConfig, consistency string) *HTTPWriter {
+	url := c.Host + "/write?consistency=" + consistency + "&db=" + url.QueryEscape(c.Database)
+	if noSync {
+		url += "&no_sync=true"
+	}
 	return &HTTPWriter{
 		client: fasthttp.Client{
 			Name: httpClientName,
 		},
 
 		c:   c,
-		url: []byte(c.Host + "/write?consistency=" + consistency + "&db=" + url.QueryEscape(c.Database)),
+		url: []byte(url),
 	}
 }
 

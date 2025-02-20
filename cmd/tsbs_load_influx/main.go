@@ -34,6 +34,7 @@ var (
 	notCreateDB       bool
 	notDropDB         bool
 	bearer            string
+	noSync            bool
 )
 
 // Global vars
@@ -83,6 +84,7 @@ func init() {
 	notCreateDB = viper.GetBool("not-create-db")
 	notDropDB = viper.GetBool("not-drop-db")
 	bearer = viper.GetString("bearer")
+	noSync = viper.GetBool("no-sync")
 
 	if _, ok := consistencyChoices[consistency]; !ok {
 		log.Fatalf("invalid consistency settings")
