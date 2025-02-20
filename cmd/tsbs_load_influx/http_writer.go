@@ -61,6 +61,7 @@ func NewHTTPWriter(c HTTPWriterConfig, consistency string) *HTTPWriter {
 	if noSync {
 		url += "&no_sync=true"
 	}
+	fmt.Printf("influx write url: %s\n", url)
 	return &HTTPWriter{
 		client: fasthttp.Client{
 			Name: httpClientName,
@@ -93,7 +94,6 @@ func (w *HTTPWriter) initializeReq(req *fasthttp.Request, body []byte, isGzip bo
 }
 
 func (w *HTTPWriter) executeReq(req *fasthttp.Request, resp *fasthttp.Response) (int64, error) {
-	fmt.Printf("influx: starting ingestion on url %s\n", w.url)
 	retry := 1
 	var lat int64
 	var err error
