@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -104,6 +105,9 @@ func (p *processor) Init(workerNumber int) {
 	if bearer != "" {
 		cfg.Token = bearer
 	}
+	log.Printf("token: %s", token)
+	log.Printf("bearer: %s", bearer)
+	log.Printf("cfg.Token: %s", cfg.Token)
 	client, err := influxdb3.New(cfg)
 	databases.PanicIfErr(err)
 	p.client = client
