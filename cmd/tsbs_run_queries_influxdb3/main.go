@@ -9,7 +9,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -56,7 +55,7 @@ func init() {
 	pflag.String("database", "", "Database name for dedicated")
 	pflag.Bool("secure", false, "Secure transport credentials")
 	pflag.Bool("flightsql", false, "Using FlightSQL")
-	pflag.String("bearer", "bearer", "Bearer token")
+	pflag.String("bearer", "", "Bearer token")
 
 	pflag.Parse()
 
@@ -105,9 +104,6 @@ func (p *processor) Init(workerNumber int) {
 	if bearer != "" {
 		cfg.Token = bearer
 	}
-	log.Printf("token: %s", token)
-	log.Printf("bearer: %s", bearer)
-	log.Printf("cfg.Token: %s", cfg.Token)
 	client, err := influxdb3.New(cfg)
 	databases.PanicIfErr(err)
 	p.client = client
