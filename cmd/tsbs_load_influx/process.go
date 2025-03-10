@@ -47,21 +47,31 @@ func (p *processor) Close(_ bool) {
 
 func (p *processor) ProcessBatch(b targets.Batch, doLoad bool) (uint64, uint64) {
 	batch := b.(*batch)
+	log.Println("1")
 
 	// Write the batch: try until backoff is not needed.
 	if doLoad {
+		log.Println("2")
 		var err error
 		for {
+			log.Println("3")
 			if useGzip {
+				log.Println("4")
 				compressedBatch := bufPool.Get().(*bytes.Buffer)
+				log.Println("5")
 				fasthttp.WriteGzip(compressedBatch, batch.buf.Bytes())
+				log.Println("6")
 				_, err = p.httpWriter.WriteLineProtocol(compressedBatch.Bytes(), true)
 				// Return the compressed batch buffer to the pool.
+				log.Println("7")
 				compressedBatch.Reset()
+				log.Println("8")
 				bufPool.Put(compressedBatch)
 			} else {
+				log.Println("9")
 				_, err = p.httpWriter.WriteLineProtocol(batch.buf.Bytes(), false)
 			}
+			log.Println("10")
 
 			log.Printf("*****err: %s", err)
 
@@ -77,12 +87,15 @@ func (p *processor) ProcessBatch(b targets.Batch, doLoad bool) (uint64, uint64) 
 			fatal("Error writing: %s\n", err.Error())
 		}
 	}
+	log.Println("11")
 	metricCnt := batch.metrics
 	rowCnt := batch.rows
 
 	// Return the batch buffer to the pool.
+	log.Println("12")
 	batch.buf.Reset()
 	bufPool.Put(batch.buf)
+	log.Println("13")
 	return metricCnt, uint64(rowCnt)
 }
 
