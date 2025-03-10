@@ -5,7 +5,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"math"
 	"math/rand"
 	"net/url"
@@ -98,19 +97,12 @@ func (w *HTTPWriter) executeReq(req *fasthttp.Request, resp *fasthttp.Response) 
 	retry := 1
 	var lat int64
 	var err error
-	log.Println("executeReq 1")
 	for {
-		log.Println("executeReq 2")
 		start := time.Now()
-		log.Println("executeReq 3")
 		err = w.client.Do(req, resp)
-		log.Println("executeReq 4")
-		log.Printf("executeReq err: %s", err)
 		lat = time.Since(start).Nanoseconds()
 		if err == nil {
-			log.Println("executeReq 5")
 			sc := resp.StatusCode()
-			log.Printf("executeReq sc: %d", sc)
 			fmt.Printf("retry=%d sc=%d lat=%d\n", retry, sc, lat)
 			if sc == 500 && backpressurePred(resp.Body()) {
 				err = errBackoff
@@ -125,7 +117,6 @@ func (w *HTTPWriter) executeReq(req *fasthttp.Request, resp *fasthttp.Response) 
 			break
 		}
 
-		log.Println("executeReq 7")
 		retryDelay := computeRetryDelay(retry)
 		fmt.Printf("retry delay: %dms\n", retryDelay)
 		time.Sleep(time.Duration(retryDelay) * time.Millisecond)
@@ -138,19 +129,13 @@ func (w *HTTPWriter) executeReq(req *fasthttp.Request, resp *fasthttp.Response) 
 // It returns the latency in nanoseconds and any error received while sending the data over HTTP,
 // or it returns a new error if the HTTP response isn't as expected.
 func (w *HTTPWriter) WriteLineProtocol(body []byte, isGzip bool) (int64, error) {
-	log.Println("WriteLineProtocol 1")
 	req := fasthttp.AcquireRequest()
-	log.Println("WriteLineProtocol 2")
 	defer fasthttp.ReleaseRequest(req)
-	log.Println("WriteLineProtocol 3")
 	w.initializeReq(req, body, isGzip)
 
-	log.Println("WriteLineProtocol 4")
 	resp := fasthttp.AcquireResponse()
-	log.Println("WriteLineProtocol 5")
 	defer fasthttp.ReleaseResponse(resp)
 
-	log.Println("WriteLineProtocol 6")
 	return w.executeReq(req, resp)
 }
 
