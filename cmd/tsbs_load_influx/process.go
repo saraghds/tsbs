@@ -3,8 +3,10 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/timescale/tsbs/pkg/targets"
+	"log"
 	"time"
+
+	"github.com/timescale/tsbs/pkg/targets"
 
 	"github.com/valyala/fasthttp"
 )
@@ -60,6 +62,8 @@ func (p *processor) ProcessBatch(b targets.Batch, doLoad bool) (uint64, uint64) 
 			} else {
 				_, err = p.httpWriter.WriteLineProtocol(batch.buf.Bytes(), false)
 			}
+
+			log.Printf("*****err: %s", err)
 
 			if err == errBackoff {
 				p.backingOffChan <- true
