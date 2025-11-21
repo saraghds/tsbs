@@ -1,18 +1,20 @@
 // tsbs_run_queries_mongo speed tests Mongo using requests from stdin.
 //
 // It reads encoded Query objects from stdin, and makes concurrent requests
-// to the provided Mongo endpoint using mgo.
+// to the provided Mongo endpoint using mongo-driver.
 package main
 
 import (
+	"context"
 	"encoding/gob"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/blagojts/viper"
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"github.com/spf13/pflag"
 	"github.com/timescale/tsbs/internal/utils"
 	"github.com/timescale/tsbs/pkg/query"
@@ -26,8 +28,8 @@ var (
 
 // Global vars:
 var (
-	runner  *query.BenchmarkRunner
-	session *mgo.Session
+	runner *query.BenchmarkRunner
+	client *mongo.Client
 )
 
 // Parse args:
@@ -64,37 +66,65 @@ func init() {
 }
 
 func main() {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	clientOpts := options.Client().ApplyURI(daemonURL).SetConnectTimeout(timeout)
 	var err error
-	session, err = mgo.DialWithTimeout(daemonURL, timeout)
+	client, err = mongo.Connect(ctx, clientOpts)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer client.Disconnect(ctx)
+
+	if err := client.Ping(ctx, nil); err != nil {
+		log.Fatalf("failed to ping MongoDB: %v", err)
+	}
+
 	runner.Run(&query.MongoPool, newProcessor)
 }
 
 type processor struct {
-	collection *mgo.Collection
+	collection *mongo.Collection
+	ctx        context.Context
 }
 
 func newProcessor() query.Processor { return &processor{} }
 
 func (p *processor) Init(workerNumber int) {
-	sess := session.Copy()
-	db := sess.DB(runner.DatabaseName())
-	p.collection = db.C("point_data")
+	p.ctx = context.Background()
+	p.collection = client.Database(runner.DatabaseName()).Collection("point_data")
 }
 
 func (p *processor) ProcessQuery(q query.Query, _ bool) ([]*query.Stat, error) {
 	mq := q.(*query.Mongo)
 	start := time.Now().UnixNano()
-	pipe := p.collection.Pipe(mq.BsonDoc).AllowDiskUse()
-	iter := pipe.Iter()
+	
+	opts := options.Aggregate().SetAllowDiskUse(true)
+	cursor, err := p.collection.Aggregate(p.ctx, mq.BsonDoc, opts)
+	if err != nil {
+		took := time.Now().UnixNano() - start
+		lag := float64(took) / 1e6 // milliseconds
+		stat := query.GetStat()
+		stat.Init(q.HumanLabelName(), lag)
+		return []*query.Stat{stat}, err
+	}
+	defer cursor.Close(p.ctx)
+	
 	if runner.DebugLevel() > 0 {
 		fmt.Println(mq.BsonDoc)
 	}
+	
 	var result map[string]interface{}
 	cnt := 0
-	for iter.Next(&result) {
+	for cursor.Next(p.ctx) {
+		if err := cursor.Decode(&result); err != nil {
+			took := time.Now().UnixNano() - start
+			lag := float64(took) / 1e6 // milliseconds
+			stat := query.GetStat()
+			stat.Init(q.HumanLabelName(), lag)
+			return []*query.Stat{stat}, err
+		}
 		if runner.DoPrintResponses() {
 			fmt.Printf("ID %d: %v\n", q.GetID(), result)
 		}
@@ -103,11 +133,18 @@ func (p *processor) ProcessQuery(q query.Query, _ bool) ([]*query.Stat, error) {
 	if runner.DebugLevel() > 0 {
 		fmt.Println(cnt)
 	}
-	err := iter.Close()
+	
+	if err := cursor.Err(); err != nil {
+		took := time.Now().UnixNano() - start
+		lag := float64(took) / 1e6 // milliseconds
+		stat := query.GetStat()
+		stat.Init(q.HumanLabelName(), lag)
+		return []*query.Stat{stat}, err
+	}
 
 	took := time.Now().UnixNano() - start
 	lag := float64(took) / 1e6 // milliseconds
 	stat := query.GetStat()
 	stat.Init(q.HumanLabelName(), lag)
-	return []*query.Stat{stat}, err
+	return []*query.Stat{stat}, nil
 }
