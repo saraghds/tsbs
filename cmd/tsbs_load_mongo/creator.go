@@ -13,25 +13,27 @@ import (
 
 type dbCreator struct {
 	client *mongo.Client
-	ctx    context.Context
-	cancel context.CancelFunc
 }
 
 func (d *dbCreator) Init() {
 	var err error
-	d.ctx, d.cancel = context.WithTimeout(context.Background(), writeTimeout)
+	// Use a temporary context for connection establishment
+	ctx, cancel := context.WithTimeout(context.Background(), writeTimeout)
+	defer cancel()
+	
 	clientOpts := options.Client().ApplyURI(daemonURL).SetConnectTimeout(writeTimeout)
-	d.client, err = mongo.Connect(d.ctx, clientOpts)
+	d.client, err = mongo.Connect(ctx, clientOpts)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := d.client.Ping(d.ctx, nil); err != nil {
+	if err := d.client.Ping(ctx, nil); err != nil {
 		log.Fatalf("failed to ping MongoDB: %v", err)
 	}
 }
 
 func (d *dbCreator) DBExists(dbName string) bool {
-	dbs, err := d.client.ListDatabaseNames(d.ctx, bson.M{})
+	ctx := context.Background()
+	dbs, err := d.client.ListDatabaseNames(ctx, bson.M{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,18 +46,20 @@ func (d *dbCreator) DBExists(dbName string) bool {
 }
 
 func (d *dbCreator) RemoveOldDB(dbName string) error {
-	collections, err := d.client.Database(dbName).ListCollectionNames(d.ctx, bson.M{})
+	ctx := context.Background()
+	collections, err := d.client.Database(dbName).ListCollectionNames(ctx, bson.M{})
 	if err != nil {
 		return err
 	}
 	for _, name := range collections {
-		d.client.Database(dbName).Collection(name).Drop(d.ctx)
+		d.client.Database(dbName).Collection(name).Drop(ctx)
 	}
 
 	return nil
 }
 
 func (d *dbCreator) CreateDB(dbName string) error {
+	ctx := context.Background()
 	cmd := make(bson.D, 0, 4)
 	cmd = append(cmd, bson.E{Key: "create", Value: collectionName})
 
@@ -68,7 +72,7 @@ func (d *dbCreator) CreateDB(dbName string) error {
 		},
 	})
 
-	res := d.client.Database(dbName).RunCommand(d.ctx, cmd, nil)
+	res := d.client.Database(dbName).RunCommand(ctx, cmd, nil)
 	if res.Err() != nil {
 		if strings.Contains(res.Err().Error(), "already exists") {
 			return nil
@@ -96,7 +100,7 @@ func (d *dbCreator) CreateDB(dbName string) error {
 		Keys:    keys,
 		Options: options.Index().SetUnique(false).SetSparse(false), // Unique does not work on the entire array of tags!
 	}
-	_, err := collection.Indexes().CreateOne(d.ctx, index)
+	_, err := collection.Indexes().CreateOne(ctx, index)
 	if err != nil {
 		return fmt.Errorf("create basic index err: %v", err)
 	}
@@ -104,7 +108,7 @@ func (d *dbCreator) CreateDB(dbName string) error {
 	// To make updates for new records more efficient, we need a efficient doc
 	// lookup index
 	if !documentPer {
-		_, err := collection.Indexes().CreateOne(d.ctx, mongo.IndexModel{
+		_, err := collection.Indexes().CreateOne(ctx, mongo.IndexModel{
 			Keys:    bson.D{{Key: aggDocID, Value: 1}},
 			Options: options.Index().SetUnique(false).SetSparse(false),
 		})
@@ -117,6 +121,6 @@ func (d *dbCreator) CreateDB(dbName string) error {
 }
 
 func (d *dbCreator) Close() {
-	d.client.Disconnect(d.ctx)
-	d.cancel()
+	ctx := context.Background()
+	d.client.Disconnect(ctx)
 }
