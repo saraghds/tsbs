@@ -89,7 +89,7 @@ type aggProcessor struct {
 func (p *aggProcessor) Init(_ int, doLoad, _ bool) {
 	if doLoad {
 		p.ctx = context.Background()
-		p.collection = p.dbc.client.Database(loader.DatabaseName()).Collection(collectionName)
+		p.collection = p.dbc.getClient().Database(loader.DatabaseName()).Collection(collectionName)
 	}
 	p.createdDocs = make(map[string]bool)
 	p.createQueue = []interface{}{}

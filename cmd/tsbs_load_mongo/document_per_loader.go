@@ -49,7 +49,7 @@ type naiveProcessor struct {
 func (p *naiveProcessor) Init(_ int, doLoad, _ bool) {
 	if doLoad {
 		p.ctx = context.Background()
-		p.collection = p.dbc.client.Database(loader.DatabaseName()).Collection(collectionName)
+		p.collection = p.dbc.getClient().Database(loader.DatabaseName()).Collection(collectionName)
 	}
 	p.pvs = []interface{}{}
 }

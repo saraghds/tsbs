@@ -15,25 +15,33 @@ type dbCreator struct {
 	client *mongo.Client
 }
 
+func (d *dbCreator) getClient() *mongo.Client {
+	if d.client == nil {
+		var err error
+		// Use a temporary context for connection establishment
+		ctx, cancel := context.WithTimeout(context.Background(), writeTimeout)
+		defer cancel()
+		
+		clientOpts := options.Client().ApplyURI(daemonURL).SetConnectTimeout(writeTimeout)
+		d.client, err = mongo.Connect(ctx, clientOpts)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := d.client.Ping(ctx, nil); err != nil {
+			log.Fatalf("failed to ping MongoDB: %v", err)
+		}
+	}
+	return d.client
+}
+
 func (d *dbCreator) Init() {
-	var err error
-	// Use a temporary context for connection establishment
-	ctx, cancel := context.WithTimeout(context.Background(), writeTimeout)
-	defer cancel()
-	
-	clientOpts := options.Client().ApplyURI(daemonURL).SetConnectTimeout(writeTimeout)
-	d.client, err = mongo.Connect(ctx, clientOpts)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := d.client.Ping(ctx, nil); err != nil {
-		log.Fatalf("failed to ping MongoDB: %v", err)
-	}
+	// Initialize connection lazily when needed
+	d.getClient()
 }
 
 func (d *dbCreator) DBExists(dbName string) bool {
 	ctx := context.Background()
-	dbs, err := d.client.ListDatabaseNames(ctx, bson.M{})
+	dbs, err := d.getClient().ListDatabaseNames(ctx, bson.M{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,12 +55,12 @@ func (d *dbCreator) DBExists(dbName string) bool {
 
 func (d *dbCreator) RemoveOldDB(dbName string) error {
 	ctx := context.Background()
-	collections, err := d.client.Database(dbName).ListCollectionNames(ctx, bson.M{})
+	collections, err := d.getClient().Database(dbName).ListCollectionNames(ctx, bson.M{})
 	if err != nil {
 		return err
 	}
 	for _, name := range collections {
-		d.client.Database(dbName).Collection(name).Drop(ctx)
+		d.getClient().Database(dbName).Collection(name).Drop(ctx)
 	}
 
 	return nil
@@ -72,7 +80,7 @@ func (d *dbCreator) CreateDB(dbName string) error {
 		},
 	})
 
-	res := d.client.Database(dbName).RunCommand(ctx, cmd, nil)
+	res := d.getClient().Database(dbName).RunCommand(ctx, cmd, nil)
 	if res.Err() != nil {
 		if strings.Contains(res.Err().Error(), "already exists") {
 			return nil
@@ -80,7 +88,7 @@ func (d *dbCreator) CreateDB(dbName string) error {
 		return fmt.Errorf("create collection err: %v", res.Err())
 	}
 
-	collection := d.client.Database(dbName).Collection(collectionName)
+	collection := d.getClient().Database(dbName).Collection(collectionName)
 	var keys bson.D
 	if documentPer {
 		keys = bson.D{
@@ -121,6 +129,9 @@ func (d *dbCreator) CreateDB(dbName string) error {
 }
 
 func (d *dbCreator) Close() {
-	ctx := context.Background()
-	d.client.Disconnect(ctx)
+	if d.client != nil {
+		ctx := context.Background()
+		d.client.Disconnect(ctx)
+		d.client = nil
+	}
 }
